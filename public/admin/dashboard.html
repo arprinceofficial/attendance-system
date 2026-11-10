@@ -1,0 +1,2303 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Admin Dashboard — Attendance System</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet" />
+  <style>
+    body { font-family: 'Inter', sans-serif; }
+    .sidebar-gradient { background: linear-gradient(180deg, #1e3a5f 0%, #0f2340 100%); }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    .spinner { animation: spin 1s linear infinite; }
+    @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+    .fade-in { animation: fadeIn 0.3s ease-out; }
+    .nav-item { transition: all 0.2s; }
+    .nav-item:hover { background: rgba(255,255,255,0.1); }
+    .nav-item.active { background: rgba(255,255,255,0.15); border-left: 3px solid #4ade80; }
+    .table-hover tr:hover { background: #f8fafc; }
+    ::-webkit-scrollbar { width: 6px; height: 6px; }
+    ::-webkit-scrollbar-track { background: #f1f5f9; }
+    ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 3px; }
+    .modal-overlay { background: rgba(0,0,0,0.5); backdrop-filter: blur(4px); }
+    .badge-ip { background: #fff3cd; color: #856404; }
+    .badge-mac { background: #f8d7da; color: #842029; }
+  </style>
+</head>
+<body class="bg-gray-100 h-screen flex overflow-hidden">
+
+  <!-- Sidebar -->
+  <aside id="sidebar" class="sidebar-gradient w-64 flex-shrink-0 flex flex-col h-full text-white z-20">
+    <!-- Logo -->
+    <div class="p-6 border-b border-white border-opacity-10">
+      <div class="flex items-center gap-3">
+        <div class="w-9 h-9 bg-green-400 rounded-xl flex items-center justify-center flex-shrink-0">
+          <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+          </svg>
+        </div>
+        <div>
+          <h1 class="font-bold text-sm leading-tight">Attendance</h1>
+          <p class="text-xs text-blue-300">Management System</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- Admin Info -->
+    <div class="px-4 py-4 border-b border-white border-opacity-10">
+      <div class="flex items-center gap-3 bg-white bg-opacity-10 rounded-xl p-3">
+        <div class="w-8 h-8 bg-green-400 rounded-full flex items-center justify-center text-sm font-bold flex-shrink-0" id="admin-avatar">A</div>
+        <div class="min-w-0">
+          <p class="text-sm font-medium truncate" id="admin-name">Admin</p>
+          <p class="text-xs text-blue-300 truncate" id="admin-role-label">Administrator</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- Navigation (dynamically filtered & ordered by RBAC) -->
+    <nav id="sidebar-nav" class="flex-1 p-4 space-y-1 overflow-y-auto">
+      <button data-menu="dashboard" class="nav-item hidden w-full flex items-center gap-3 px-4 py-3 rounded-xl text-left text-sm" onclick="showSection('dashboard')">
+        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z"/></svg>
+        <span>Dashboard</span>
+      </button>
+      <button data-menu="today" class="nav-item hidden w-full flex items-center gap-3 px-4 py-3 rounded-xl text-left text-sm" onclick="showSection('today')">
+        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4"/></svg>
+        <span>Today's Attendance</span>
+        <span id="today-badge" class="ml-auto bg-green-400 text-white text-xs rounded-full px-2 py-0.5 hidden"></span>
+      </button>
+      <button data-menu="history" class="nav-item hidden w-full flex items-center gap-3 px-4 py-3 rounded-xl text-left text-sm" onclick="showSection('history')">
+        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+        <span>Attendance History</span>
+      </button>
+      <button data-menu="departments" class="nav-item hidden w-full flex items-center gap-3 px-4 py-3 rounded-xl text-left text-sm" onclick="showSection('departments')">
+        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"/></svg>
+        <span>Departments</span>
+      </button>
+      <button data-menu="users" class="nav-item hidden w-full flex items-center gap-3 px-4 py-3 rounded-xl text-left text-sm" onclick="showSection('users')">
+        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z"/></svg>
+        <span id="nav-users-label">User Management</span>
+      </button>
+      <button data-menu="link" class="nav-item hidden w-full flex items-center gap-3 px-4 py-3 rounded-xl text-left text-sm" onclick="showSection('link')">
+        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1"/></svg>
+        <span>Link Manager</span>
+      </button>
+      <button data-menu="roles" class="nav-item hidden w-full flex items-center gap-3 px-4 py-3 rounded-xl text-left text-sm" onclick="showSection('roles')">
+        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"/></svg>
+        <span>Roles &amp; RBAC</span>
+      </button>
+      <button data-menu="my_profile" class="nav-item hidden w-full flex items-center gap-3 px-4 py-3 rounded-xl text-left text-sm" onclick="showSection('my_profile')">
+        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5.121 17.804A13.937 13.937 0 0112 16c2.5 0 4.847.655 6.879 1.804M15 10a3 3 0 11-6 0 3 3 0 016 0zm6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+        <span>My Profile</span>
+      </button>
+      <button data-menu="my_attendance" class="nav-item hidden w-full flex items-center gap-3 px-4 py-3 rounded-xl text-left text-sm" onclick="showSection('my_attendance')">
+        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
+        <span>My Attendance</span>
+      </button>
+    </nav>
+
+    <!-- Logout -->
+    <div class="p-4 border-t border-white border-opacity-10">
+      <button onclick="logout()" class="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-left text-sm text-red-300 hover:bg-red-900 hover:bg-opacity-30 transition-all">
+        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"/></svg>
+        <span>Logout</span>
+      </button>
+    </div>
+  </aside>
+
+  <!-- Main Content -->
+  <main class="flex-1 flex flex-col h-full overflow-hidden">
+
+    <!-- Top bar -->
+    <header class="bg-white border-b border-gray-200 px-6 py-4 flex items-center justify-between flex-shrink-0">
+      <div>
+        <h2 id="page-title" class="text-xl font-bold text-gray-800">Dashboard</h2>
+        <p id="page-subtitle" class="text-gray-500 text-sm" id="page-date"></p>
+      </div>
+      <div class="flex items-center gap-3">
+        <span id="current-time" class="text-sm text-gray-500 font-mono bg-gray-100 px-3 py-1.5 rounded-lg"></span>
+        <button onclick="refreshCurrentSection()" class="text-gray-400 hover:text-gray-700 transition-colors" title="Refresh">
+          <svg id="refresh-icon" class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/>
+          </svg>
+        </button>
+      </div>
+    </header>
+
+    <!-- Page content -->
+    <div class="flex-1 overflow-y-auto p-6">
+
+      <!-- DASHBOARD SECTION -->
+      <section id="section-dashboard" class="fade-in">
+        <!-- Stats Cards -->
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-5 mb-6">
+          <div class="bg-white rounded-2xl p-6 shadow-sm border border-gray-100">
+            <div class="flex items-center justify-between mb-4">
+              <div class="w-12 h-12 bg-blue-100 rounded-xl flex items-center justify-center">
+                <svg class="w-6 h-6 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
+              </div>
+              <span class="text-xs font-medium text-blue-600 bg-blue-50 px-2.5 py-1 rounded-full">Total</span>
+            </div>
+            <p class="text-3xl font-bold text-gray-900" id="stat-total">—</p>
+            <p class="text-gray-500 text-sm mt-1" id="stat-total-label">Registered Students</p>
+          </div>
+
+          <div class="bg-white rounded-2xl p-6 shadow-sm border border-gray-100">
+            <div class="flex items-center justify-between mb-4">
+              <div class="w-12 h-12 bg-green-100 rounded-xl flex items-center justify-center">
+                <svg class="w-6 h-6 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+              </div>
+              <span class="text-xs font-medium text-green-600 bg-green-50 px-2.5 py-1 rounded-full">Today</span>
+            </div>
+            <p class="text-3xl font-bold text-gray-900" id="stat-present">—</p>
+            <p class="text-gray-500 text-sm mt-1">Students Present</p>
+          </div>
+
+          <div class="bg-white rounded-2xl p-6 shadow-sm border border-gray-100">
+            <div class="flex items-center justify-between mb-4">
+              <div class="w-12 h-12 bg-red-100 rounded-xl flex items-center justify-center">
+                <svg class="w-6 h-6 text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+              </div>
+              <span class="text-xs font-medium text-red-500 bg-red-50 px-2.5 py-1 rounded-full">Today</span>
+            </div>
+            <p class="text-3xl font-bold text-gray-900" id="stat-absent">—</p>
+            <p class="text-gray-500 text-sm mt-1">Students Absent</p>
+          </div>
+        </div>
+
+        <!-- Recent attendance table (mini version) -->
+        <div class="bg-white rounded-2xl shadow-sm border border-gray-100">
+          <div class="p-5 border-b border-gray-100 flex items-center justify-between">
+            <h3 class="font-semibold text-gray-800">Recent Attendance Today</h3>
+            <button onclick="showSection('today')" class="text-sm text-blue-600 hover:underline font-medium">View All →</button>
+          </div>
+          <div id="dashboard-table-wrap" class="overflow-x-auto">
+            <table class="w-full table-hover">
+              <thead><tr class="bg-gray-50 text-xs font-semibold text-gray-500 uppercase tracking-wide">
+                <th class="text-left px-5 py-3">Name</th>
+                <th class="text-left px-5 py-3">Email</th>
+                <th class="text-left px-5 py-3">Department</th>
+                <th class="text-left px-5 py-3">Time</th>
+                <th class="text-left px-5 py-3">Flags</th>
+              </tr></thead>
+              <tbody id="dashboard-table-body">
+                <tr><td colspan="5" class="text-center py-10 text-gray-400">Loading…</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+
+      <!-- TODAY'S ATTENDANCE SECTION -->
+      <section id="section-today" class="hidden fade-in">
+        <div class="bg-white rounded-2xl shadow-sm border border-gray-100">
+          <div class="p-5 border-b border-gray-100 flex flex-wrap gap-3 items-center justify-between">
+            <h3 class="font-semibold text-gray-800">Today's Attendance</h3>
+            <div class="flex flex-wrap gap-2 items-center">
+              <div id="today-admin-filters" class="hidden flex flex-wrap gap-2 items-center">
+                <select id="today-filter-dept" onchange="loadToday()" class="border border-gray-200 rounded-xl px-3 py-2 text-sm bg-gray-50 focus:ring-2 focus:ring-blue-500 outline-none">
+                  <option value="">All Departments</option>
+                </select>
+                <select id="today-filter-teacher" onchange="loadToday()" class="border border-gray-200 rounded-xl px-3 py-2 text-sm bg-gray-50 focus:ring-2 focus:ring-blue-500 outline-none">
+                  <option value="">All Teachers</option>
+                </select>
+              </div>
+              <button id="today-export-btn" onclick="downloadCSV('today')" class="flex items-center gap-2 bg-blue-50 text-blue-700 hover:bg-blue-100 px-4 py-2 rounded-xl text-sm font-medium transition-colors">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/></svg>
+                Export CSV
+              </button>
+              <button id="today-manual-btn" onclick="openManualMarkModal()" class="flex items-center gap-2 bg-green-600 text-white hover:bg-green-700 px-4 py-2 rounded-xl text-sm font-medium transition-colors">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
+                Mark Manually
+              </button>
+            </div>
+          </div>
+          <div id="today-filter-info" class="px-5 py-2.5 bg-blue-50 text-xs text-blue-700 hidden"></div>
+          <div class="overflow-x-auto">
+            <table class="w-full table-hover">
+              <thead><tr class="bg-gray-50 text-xs font-semibold text-gray-500 uppercase tracking-wide">
+                <th class="text-left px-5 py-3">Name</th>
+                <th class="text-left px-5 py-3">Email</th>
+                <th class="text-left px-5 py-3">Department</th>
+                <th class="text-left px-5 py-3">Teacher</th>
+                <th class="text-left px-5 py-3">Time</th>
+                <th class="text-left px-5 py-3">Status</th>
+                <th class="text-left px-5 py-3">IP Address</th>
+                <th class="text-left px-5 py-3">MAC Address</th>
+                <th class="text-left px-5 py-3">Flags</th>
+                <th class="text-left px-5 py-3">Actions</th>
+              </tr></thead>
+              <tbody id="today-table-body">
+                <tr><td colspan="10" class="text-center py-10 text-gray-400">Loading…</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+
+      <!-- HISTORY SECTION -->
+      <section id="section-history" class="hidden fade-in">
+        <div class="bg-white rounded-2xl shadow-sm border border-gray-100">
+          <div class="p-5 border-b border-gray-100 flex flex-wrap gap-3 items-center justify-between">
+            <h3 class="font-semibold text-gray-800">Attendance History</h3>
+            <div class="flex flex-wrap gap-2 items-center">
+              <div id="history-admin-filters" class="hidden flex flex-wrap gap-2 items-center">
+                <select id="history-filter-dept" class="border border-gray-200 rounded-xl px-3 py-2 text-sm bg-gray-50 focus:ring-2 focus:ring-blue-500 outline-none">
+                  <option value="">All Departments</option>
+                </select>
+                <select id="history-filter-teacher" class="border border-gray-200 rounded-xl px-3 py-2 text-sm bg-gray-50 focus:ring-2 focus:ring-blue-500 outline-none">
+                  <option value="">All Teachers</option>
+                </select>
+              </div>
+              <input type="date" id="history-date" class="border border-gray-200 rounded-xl px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 outline-none" />
+              <button onclick="fetchHistory()" class="bg-blue-600 text-white hover:bg-blue-700 px-4 py-2 rounded-xl text-sm font-medium transition-colors">Search</button>
+              <button id="history-export-btn" onclick="downloadCSV('history')" class="flex items-center gap-2 bg-gray-100 text-gray-700 hover:bg-gray-200 px-4 py-2 rounded-xl text-sm font-medium transition-colors">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/></svg>
+                CSV
+              </button>
+            </div>
+          </div>
+          <div id="history-info" class="px-5 py-3 bg-blue-50 text-sm text-blue-700 hidden"></div>
+          <div class="overflow-x-auto">
+            <table class="w-full table-hover">
+              <thead><tr class="bg-gray-50 text-xs font-semibold text-gray-500 uppercase tracking-wide">
+                <th class="text-left px-5 py-3">Name</th>
+                <th class="text-left px-5 py-3">Email</th>
+                <th class="text-left px-5 py-3">Department</th>
+                <th class="text-left px-5 py-3">Teacher</th>
+                <th class="text-left px-5 py-3">Date</th>
+                <th class="text-left px-5 py-3">Time</th>
+                <th class="text-left px-5 py-3">Status</th>
+                <th class="text-left px-5 py-3">IP Address</th>
+                <th class="text-left px-5 py-3">MAC Address</th>
+                <th class="text-left px-5 py-3">Flags</th>
+              </tr></thead>
+              <tbody id="history-table-body">
+                <tr><td colspan="10" class="text-center py-10 text-gray-400">Select a date to view records.</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+
+      <!-- DEPARTMENTS SECTION -->
+      <section id="section-departments" class="hidden fade-in">
+        <div class="bg-white rounded-2xl shadow-sm border border-gray-100">
+          <div class="p-5 border-b border-gray-100 flex flex-wrap gap-3 items-center justify-between">
+            <div>
+              <h3 class="font-semibold text-gray-800">Departments</h3>
+              <p class="text-xs text-gray-500 mt-0.5">Add, edit, or delete departments used across teachers, students, and attendance filters.</p>
+            </div>
+            <button onclick="openDeptModal()" class="flex items-center gap-2 bg-blue-600 text-white hover:bg-blue-700 px-4 py-2 rounded-xl text-sm font-medium transition-colors">
+              <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
+              Add Department
+            </button>
+          </div>
+          <div class="overflow-x-auto">
+            <table class="w-full table-hover">
+              <thead><tr class="bg-gray-50 text-xs font-semibold text-gray-500 uppercase tracking-wide">
+                <th class="text-left px-5 py-3">Department Name</th>
+                <th class="text-left px-5 py-3">Code</th>
+                <th class="text-left px-5 py-3">Description</th>
+                <th class="text-left px-5 py-3">Teachers</th>
+                <th class="text-left px-5 py-3">Students</th>
+                <th class="text-left px-5 py-3">Created</th>
+                <th class="text-left px-5 py-3">Actions</th>
+              </tr></thead>
+              <tbody id="departments-table-body">
+                <tr><td colspan="7" class="text-center py-10 text-gray-400">Loading…</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+
+      <!-- USERS SECTION -->
+      <section id="section-users" class="hidden fade-in">
+        <div class="bg-white rounded-2xl shadow-sm border border-gray-100">
+          <div class="p-5 border-b border-gray-100 flex flex-wrap gap-3 items-center justify-between">
+            <h3 id="users-section-title" class="font-semibold text-gray-800">User Management</h3>
+            <div class="flex flex-wrap gap-2 items-center">
+              <div id="users-admin-filters" class="hidden flex flex-wrap gap-2 items-center">
+                <select id="users-filter-role" onchange="loadUsers()" class="border border-gray-200 rounded-xl px-3 py-2 text-sm bg-gray-50 focus:ring-2 focus:ring-blue-500 outline-none">
+                  <option value="">All Roles</option>
+                  <option value="student">Students</option>
+                  <option value="teacher">Teachers</option>
+                  <option value="admin">Admins</option>
+                </select>
+                <select id="users-filter-dept" onchange="loadUsers()" class="border border-gray-200 rounded-xl px-3 py-2 text-sm bg-gray-50 focus:ring-2 focus:ring-blue-500 outline-none">
+                  <option value="">All Departments</option>
+                </select>
+              </div>
+              <button id="users-add-btn" onclick="openUserModal()" class="flex items-center gap-2 bg-blue-600 text-white hover:bg-blue-700 px-4 py-2 rounded-xl text-sm font-medium transition-colors">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
+                <span id="add-user-btn-label">Add User</span>
+              </button>
+            </div>
+          </div>
+          <div class="overflow-x-auto">
+            <table class="w-full table-hover">
+              <thead><tr class="bg-gray-50 text-xs font-semibold text-gray-500 uppercase tracking-wide">
+                <th class="text-left px-5 py-3">Name</th>
+                <th class="text-left px-5 py-3">Email</th>
+                <th class="text-left px-5 py-3">Role</th>
+                <th class="text-left px-5 py-3">Department</th>
+                <th class="text-left px-5 py-3">Teacher / Students</th>
+                <th class="text-left px-5 py-3">Created</th>
+                <th class="text-left px-5 py-3">Actions</th>
+              </tr></thead>
+              <tbody id="users-table-body">
+                <tr><td colspan="7" class="text-center py-10 text-gray-400">Loading…</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+
+      <!-- LINK MANAGER SECTION -->
+      <section id="section-link" class="hidden fade-in">
+        <div class="max-w-2xl space-y-6">
+          <div>
+            <h3 class="text-lg font-bold text-gray-800">Link Manager</h3>
+            <p class="text-sm text-gray-500 mt-1">Create and manage today's attendance link with an optional expiry timer. By default no link is active until you create one.</p>
+          </div>
+
+          <!-- Active Link Card -->
+          <div id="link-active-card" class="hidden bg-white rounded-2xl border border-gray-200 shadow-sm p-6">
+            <div class="flex items-center justify-between mb-4">
+              <div class="flex items-center gap-3">
+                <div class="w-10 h-10 bg-green-100 rounded-xl flex items-center justify-center">
+                  <svg class="w-5 h-5 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1"/></svg>
+                </div>
+                <div>
+                  <p class="font-semibold text-gray-800">Active Attendance Link</p>
+                  <p class="text-xs text-green-600 font-medium">● Link is active (<span id="link-date-badge"></span>)</p>
+                </div>
+              </div>
+              <div id="link-timer-badge" class="hidden px-3 py-1.5 bg-amber-50 border border-amber-200 rounded-lg text-sm font-mono font-semibold text-amber-700">
+                ⏱ <span id="link-countdown">--:--:--</span>
+              </div>
+              <div id="link-no-timer-badge" class="hidden px-3 py-1.5 bg-blue-50 border border-blue-200 rounded-lg text-xs font-medium text-blue-700">
+                No expiry timer
+              </div>
+            </div>
+
+            <div class="bg-gray-50 rounded-xl p-4 mb-4">
+              <p class="text-xs text-gray-500 mb-2 font-medium uppercase tracking-wide">Attendance URL</p>
+              <div class="flex items-center gap-3">
+                <a id="link-url-display" href="#" target="_blank" class="text-blue-600 hover:text-blue-800 text-sm font-mono break-all flex-1 hover:underline"></a>
+                <button onclick="copyLink()" class="flex-shrink-0 px-3 py-1.5 bg-white border border-gray-300 rounded-lg text-xs font-medium text-gray-700 hover:bg-gray-50 transition-all flex items-center gap-1.5">
+                  <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 5H6a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2v-1M8 5a2 2 0 002 2h2a2 2 0 002-2M8 5a2 2 0 012-2h2a2 2 0 012 2m0 0h2a2 2 0 012 2v3m2 4H10m0 0l3-3m-3 3l3 3"/></svg>
+                  Copy
+                </button>
+              </div>
+            </div>
+
+            <div class="flex gap-3">
+              <button onclick="showCreateLinkForm()" class="flex-1 px-4 py-2.5 bg-blue-600 text-white rounded-xl text-sm font-medium hover:bg-blue-700 transition-all flex items-center justify-center gap-2">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg>
+                Generate New Link
+              </button>
+              <button onclick="deactivateLink()" class="px-4 py-2.5 bg-red-50 text-red-600 border border-red-200 rounded-xl text-sm font-medium hover:bg-red-100 transition-all">
+                Deactivate
+              </button>
+            </div>
+          </div>
+
+          <!-- Expired Link Card -->
+          <div id="link-expired-card" class="hidden bg-amber-50 border border-amber-200 rounded-2xl p-6">
+            <div class="flex items-center gap-3 mb-3">
+              <svg class="w-5 h-5 text-amber-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+              <p class="font-semibold text-amber-800">Link Expired</p>
+            </div>
+            <p class="text-sm text-amber-700 mb-4">Today's attendance link timer has expired. Create a new one to allow students to mark attendance.</p>
+            <button onclick="showCreateLinkForm()" class="px-4 py-2 bg-amber-600 text-white rounded-xl text-sm font-medium hover:bg-amber-700 transition-all">
+              Create New Link
+            </button>
+          </div>
+
+          <!-- No Link Card -->
+          <div id="link-none-card" class="bg-white border-2 border-dashed border-gray-200 rounded-2xl p-10 text-center">
+            <div class="w-16 h-16 bg-gray-100 rounded-2xl flex items-center justify-center mx-auto mb-4">
+              <svg class="w-8 h-8 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1"/></svg>
+            </div>
+            <p class="text-gray-700 font-semibold mb-1">No Active Link</p>
+            <p class="text-gray-500 text-sm mb-6">No attendance link has been created for today. Create one below to allow students to mark their attendance.</p>
+            <button onclick="showCreateLinkForm()" class="px-6 py-3 bg-blue-600 text-white rounded-xl text-sm font-semibold hover:bg-blue-700 transition-all shadow-sm shadow-blue-200">
+              + Create Attendance Link
+            </button>
+          </div>
+
+          <!-- Create Link Form Card -->
+          <div id="link-create-card" class="hidden bg-white rounded-2xl border border-gray-200 shadow-sm p-6">
+            <h4 class="font-semibold text-gray-800 mb-4">Create New Attendance Link</h4>
+
+            <div class="mb-4">
+              <label class="block text-sm font-medium text-gray-700 mb-2">Link Expiry Timer</label>
+              <select id="link-duration-select" onchange="toggleCustomDuration(this.value)" class="w-full px-4 py-2.5 border border-gray-300 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white">
+                <option value="0">No expiry (active until today ends or deactivated)</option>
+                <option value="5">5 minutes</option>
+                <option value="15">15 minutes</option>
+                <option value="30">30 minutes</option>
+                <option value="60">1 hour</option>
+                <option value="120">2 hours</option>
+                <option value="240">4 hours</option>
+                <option value="480">8 hours</option>
+                <option value="custom">Custom duration...</option>
+              </select>
+            </div>
+
+            <div id="custom-duration-row" class="hidden mb-4">
+              <label class="block text-sm font-medium text-gray-700 mb-2">Custom Duration (minutes)</label>
+              <input type="number" id="link-custom-minutes" min="1" max="1440" placeholder="e.g. 45" class="w-full px-4 py-2.5 border border-gray-300 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
+            </div>
+
+            <div class="mb-4">
+              <label class="block text-sm font-medium text-gray-700 mb-2">Mark Late After (Optional)</label>
+              <input type="time" id="link-late-after" class="w-full px-4 py-2.5 border border-gray-300 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white" />
+              <p class="text-xs text-gray-400 mt-1">Students logging in after this time will be marked as Late automatically.</p>
+            </div>
+
+            <div class="bg-blue-50 border border-blue-100 rounded-xl p-3 mb-5 text-xs text-blue-700">
+              <strong>Note:</strong> Creating a new link will deactivate any currently active link for today. The old link will immediately stop working for students.
+            </div>
+
+            <div class="flex gap-3">
+              <button onclick="createLink()" id="create-link-btn" class="flex-1 px-4 py-2.5 bg-blue-600 text-white rounded-xl text-sm font-semibold hover:bg-blue-700 transition-all">
+                Create Link
+              </button>
+              <button onclick="hideCreateLinkForm()" class="px-4 py-2.5 bg-gray-100 text-gray-700 rounded-xl text-sm font-medium hover:bg-gray-200 transition-all">
+                Cancel
+              </button>
+            </div>
+          </div>
+
+          <!-- Link History -->
+          <div class="bg-white rounded-2xl border border-gray-200 shadow-sm p-6">
+            <h4 class="font-semibold text-gray-800 mb-4">Today's Link History</h4>
+            <div id="link-history-list" class="text-sm text-gray-500">Loading…</div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ROLES & RBAC SECTION -->
+      <section id="section-roles" class="hidden fade-in">
+        <div class="space-y-6">
+          <div class="flex flex-wrap items-center justify-between gap-4">
+            <div>
+              <h3 class="text-lg font-bold text-gray-800">Roles, Permissions &amp; Left Menu Manager</h3>
+              <p class="text-sm text-gray-500 mt-1">Create custom roles (such as HR) and decide exactly which permissions, data scope, and left sidebar menus each role gets.</p>
+            </div>
+            <button onclick="openRoleModal()" class="flex items-center gap-2 bg-blue-600 text-white hover:bg-blue-700 px-4 py-2.5 rounded-xl text-sm font-semibold transition-colors shadow-sm">
+              <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
+              Create Role
+            </button>
+          </div>
+          <div id="roles-grid" class="grid grid-cols-1 lg:grid-cols-2 gap-5">
+            <div class="bg-white rounded-2xl p-8 text-center text-gray-400 border border-gray-100">Loading roles…</div>
+          </div>
+        </div>
+      </section>
+
+      <!-- MY PROFILE SECTION (Student / User Information) -->
+      <section id="section-my_profile" class="hidden fade-in">
+        <div class="max-w-2xl space-y-6">
+          <div class="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
+            <div class="bg-gradient-to-r from-slate-800 to-emerald-800 p-6 text-white flex items-center gap-4">
+              <div id="profile-avatar" class="w-16 h-16 bg-green-400 text-slate-900 rounded-2xl flex items-center justify-center text-2xl font-bold flex-shrink-0">U</div>
+              <div class="min-w-0 flex-1">
+                <h3 id="profile-name" class="text-xl font-bold truncate">—</h3>
+                <p id="profile-email" class="text-sm text-green-200 truncate">—</p>
+                <div class="mt-2 flex flex-wrap gap-2">
+                  <span id="profile-role-badge" class="px-2.5 py-0.5 rounded-full text-xs font-semibold bg-white bg-opacity-20 text-white">—</span>
+                  <span id="profile-today-badge" class="px-2.5 py-0.5 rounded-full text-xs font-semibold bg-white bg-opacity-20 text-white">—</span>
+                </div>
+              </div>
+            </div>
+            <div class="p-6 grid grid-cols-1 sm:grid-cols-2 gap-5">
+              <div class="bg-gray-50 rounded-xl p-4">
+                <p class="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-1">Department</p>
+                <p id="profile-department" class="text-sm font-semibold text-gray-800">—</p>
+              </div>
+              <div class="bg-gray-50 rounded-xl p-4">
+                <p class="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-1">Member Since</p>
+                <p id="profile-created" class="text-sm font-semibold text-gray-800">—</p>
+              </div>
+              <div id="profile-teacher-card" class="sm:col-span-2 bg-blue-50 border border-blue-100 rounded-xl p-4 hidden">
+                <p class="text-xs font-semibold text-blue-600 uppercase tracking-wide mb-1">Assigned Teacher</p>
+                <p id="profile-teacher-name" class="text-sm font-bold text-gray-900">—</p>
+                <p id="profile-teacher-meta" class="text-xs text-gray-600 mt-0.5">—</p>
+              </div>
+              <div class="bg-green-50 border border-green-100 rounded-xl p-4">
+                <p class="text-xs font-semibold text-green-700 uppercase tracking-wide mb-1">Total Attendance Days</p>
+                <p id="profile-total-days" class="text-2xl font-bold text-green-800">0</p>
+              </div>
+              <div class="bg-purple-50 border border-purple-100 rounded-xl p-4">
+                <p class="text-xs font-semibold text-purple-700 uppercase tracking-wide mb-1">Today's Status</p>
+                <p id="profile-today-status" class="text-sm font-semibold text-purple-900">—</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- MY ATTENDANCE SECTION (Calendar + Summary Cards) -->
+      <section id="section-my_attendance" class="hidden fade-in">
+        <div class="space-y-6">
+          <!-- Sub-header with month badge -->
+          <div class="flex flex-wrap items-center justify-between gap-3">
+            <div>
+              <h3 class="text-lg font-bold text-gray-800">My Attendance</h3>
+              <p class="text-sm text-gray-500">View your attendance calendar and attendance status</p>
+            </div>
+            <span id="my-month-pill" class="px-3 py-1 bg-white border border-gray-200 rounded-lg text-xs font-semibold text-gray-700 shadow-sm">—</span>
+          </div>
+
+          <!-- 4 Summary Cards -->
+          <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+            <div class="bg-white rounded-2xl p-5 shadow-sm border border-gray-100 flex items-center gap-3.5">
+              <div class="w-10 h-10 rounded-full bg-green-50 flex items-center justify-center flex-shrink-0">
+                <svg class="w-5 h-5 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+              </div>
+              <div>
+                <p class="text-xs font-medium text-gray-500">Present Days</p>
+                <p id="my-stat-present" class="text-2xl font-bold text-gray-900">0</p>
+              </div>
+            </div>
+
+            <div class="bg-white rounded-2xl p-5 shadow-sm border border-gray-100 flex items-center gap-3.5">
+              <div class="w-10 h-10 rounded-full bg-amber-50 flex items-center justify-center flex-shrink-0">
+                <svg class="w-5 h-5 text-amber-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+              </div>
+              <div>
+                <p class="text-xs font-medium text-gray-500">Late Days</p>
+                <p id="my-stat-late" class="text-2xl font-bold text-amber-600">0</p>
+              </div>
+            </div>
+
+            <div class="bg-white rounded-2xl p-5 shadow-sm border border-gray-100 flex items-center gap-3.5">
+              <div class="w-10 h-10 rounded-full bg-red-50 flex items-center justify-center flex-shrink-0">
+                <svg class="w-5 h-5 text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+              </div>
+              <div>
+                <p class="text-xs font-medium text-gray-500">Absent Days</p>
+                <p id="my-stat-absent" class="text-2xl font-bold text-red-600">0</p>
+              </div>
+            </div>
+
+            <div class="bg-white rounded-2xl p-5 shadow-sm border border-gray-100 flex items-center gap-3.5">
+              <div class="w-10 h-10 rounded-full bg-slate-100 flex items-center justify-center flex-shrink-0">
+                <svg class="w-5 h-5 text-slate-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
+              </div>
+              <div>
+                <p class="text-xs font-medium text-gray-500">Total Days</p>
+                <p id="my-stat-total-days" class="text-2xl font-bold text-gray-900">0</p>
+              </div>
+            </div>
+          </div>
+
+          <!-- Attendance Calendar Card -->
+          <div class="bg-white rounded-2xl shadow-sm border border-gray-100 p-6">
+            <div class="flex flex-wrap items-center justify-between gap-3 mb-5">
+              <h3 class="text-lg font-bold text-gray-900">Attendance Calendar</h3>
+              <div class="flex items-center gap-2">
+                <button onclick="changeCalendarMonth(-1)" class="w-8 h-8 flex items-center justify-center border border-gray-200 rounded-lg text-gray-600 hover:bg-gray-50 transition-colors" title="Previous Month">
+                  <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/></svg>
+                </button>
+                <span id="calendar-month-label" class="text-sm font-semibold text-gray-800 min-w-32 text-center">—</span>
+                <button onclick="changeCalendarMonth(1)" class="w-8 h-8 flex items-center justify-center border border-gray-200 rounded-lg text-gray-600 hover:bg-gray-50 transition-colors" title="Next Month">
+                  <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg>
+                </button>
+              </div>
+            </div>
+
+            <!-- Weekday headers -->
+            <div class="grid grid-cols-7 gap-2 text-center text-xs font-medium text-gray-500 mb-2">
+              <div class="py-1">Sun</div>
+              <div class="py-1">Mon</div>
+              <div class="py-1">Tue</div>
+              <div class="py-1">Wed</div>
+              <div class="py-1">Thu</div>
+              <div class="py-1">Fri</div>
+              <div class="py-1">Sat</div>
+            </div>
+
+            <!-- Calendar cells -->
+            <div id="attendance-calendar-grid" class="grid grid-cols-7 gap-2"></div>
+          </div>
+
+          <!-- Network & Detailed Logs -->
+          <div class="bg-white rounded-2xl shadow-sm border border-gray-100">
+            <div class="p-5 border-b border-gray-100 flex flex-wrap items-center justify-between gap-2">
+              <h3 class="font-semibold text-gray-800">Attendance &amp; Network Logs</h3>
+              <span id="my-last-network" class="text-xs font-mono text-gray-500"></span>
+            </div>
+            <div class="overflow-x-auto">
+              <table class="w-full table-hover">
+                <thead><tr class="bg-gray-50 text-xs font-semibold text-gray-500 uppercase tracking-wide">
+                  <th class="text-left px-5 py-3">Date</th>
+                  <th class="text-left px-5 py-3">Time Marked</th>
+                  <th class="text-left px-5 py-3">Status</th>
+                  <th class="text-left px-5 py-3">IP Address</th>
+                  <th class="text-left px-5 py-3">MAC Address</th>
+                  <th class="text-left px-5 py-3">Flags</th>
+                </tr></thead>
+                <tbody id="my-attendance-table-body">
+                  <tr><td colspan="6" class="text-center py-10 text-gray-400">Loading…</td></tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      </section>
+
+    </div>
+  </main>
+
+  <!-- ─────── MODALS ─────── -->
+
+  <!-- Role RBAC Modal -->
+  <div id="role-modal" class="hidden fixed inset-0 modal-overlay flex items-center justify-center z-50 p-4">
+    <div class="bg-white rounded-2xl shadow-2xl w-full max-w-2xl max-h-[90vh] flex flex-col fade-in">
+      <div class="p-6 border-b border-gray-100 flex items-center justify-between flex-shrink-0">
+        <h3 id="role-modal-title" class="font-bold text-gray-800 text-lg">Create Role</h3>
+        <button onclick="closeRoleModal()" class="text-gray-400 hover:text-gray-700 transition-colors">
+          <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+        </button>
+      </div>
+      <form id="role-form" class="p-6 space-y-5 overflow-y-auto">
+        <input type="hidden" id="role-id" />
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div>
+            <label class="block text-sm font-medium text-gray-700 mb-1.5">Role Key (slug)</label>
+            <input type="text" id="role-name" required placeholder="e.g. hr or hod"
+              class="w-full border border-gray-200 rounded-xl px-4 py-2.5 text-sm focus:ring-2 focus:ring-blue-500 outline-none bg-gray-50" />
+          </div>
+          <div>
+            <label class="block text-sm font-medium text-gray-700 mb-1.5">Display Label</label>
+            <input type="text" id="role-label" required placeholder="e.g. HR Manager"
+              class="w-full border border-gray-200 rounded-xl px-4 py-2.5 text-sm focus:ring-2 focus:ring-blue-500 outline-none bg-gray-50" />
+          </div>
+        </div>
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div>
+            <label class="block text-sm font-medium text-gray-700 mb-1.5">Description</label>
+            <input type="text" id="role-description" placeholder="Short description of this role"
+              class="w-full border border-gray-200 rounded-xl px-4 py-2.5 text-sm focus:ring-2 focus:ring-blue-500 outline-none bg-gray-50" />
+          </div>
+          <div>
+            <label class="block text-sm font-medium text-gray-700 mb-1.5">Data Visibility Scope</label>
+            <select id="role-data-scope" class="w-full border border-gray-200 rounded-xl px-4 py-2.5 text-sm focus:ring-2 focus:ring-blue-500 outline-none bg-gray-50">
+              <option value="all">All Data (Global)</option>
+              <option value="department">Same Department Only</option>
+              <option value="assigned_students">Assigned Students Only</option>
+              <option value="own">Own Info &amp; Attendance Only</option>
+            </select>
+          </div>
+        </div>
+
+        <div>
+          <div class="flex items-center justify-between mb-2">
+            <label class="block text-sm font-semibold text-gray-800">Left Sidebar Menus</label>
+            <div class="space-x-2 text-xs">
+              <button type="button" onclick="toggleAllRoleBoxes('role-menu-cb', true)" class="text-blue-600 hover:underline">Select All</button>
+              <button type="button" onclick="toggleAllRoleBoxes('role-menu-cb', false)" class="text-gray-500 hover:underline">Clear</button>
+            </div>
+          </div>
+          <div id="role-menus-boxes" class="grid grid-cols-1 sm:grid-cols-2 gap-2.5 bg-gray-50 p-3.5 rounded-xl border border-gray-200"></div>
+        </div>
+
+        <div>
+          <div class="flex items-center justify-between mb-2">
+            <label class="block text-sm font-semibold text-gray-800">Action Permissions</label>
+            <div class="space-x-2 text-xs">
+              <button type="button" onclick="toggleAllRoleBoxes('role-perm-cb', true)" class="text-blue-600 hover:underline">Select All</button>
+              <button type="button" onclick="toggleAllRoleBoxes('role-perm-cb', false)" class="text-gray-500 hover:underline">Clear</button>
+            </div>
+          </div>
+          <div id="role-perms-boxes" class="grid grid-cols-1 sm:grid-cols-2 gap-2.5 bg-gray-50 p-3.5 rounded-xl border border-gray-200"></div>
+        </div>
+
+        <div id="role-modal-error" class="hidden bg-red-50 border border-red-200 text-red-700 rounded-xl p-3 text-sm"></div>
+        <div class="flex gap-3 pt-2">
+          <button type="button" onclick="closeRoleModal()" class="flex-1 bg-gray-100 text-gray-700 hover:bg-gray-200 py-2.5 rounded-xl text-sm font-medium transition-colors">Cancel</button>
+          <button type="submit" id="role-submit-btn" class="flex-1 bg-blue-600 text-white hover:bg-blue-700 py-2.5 rounded-xl text-sm font-semibold transition-colors">Save Role</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Department Modal -->
+  <div id="dept-modal" class="hidden fixed inset-0 modal-overlay flex items-center justify-center z-50 p-4">
+    <div class="bg-white rounded-2xl shadow-2xl w-full max-w-md fade-in">
+      <div class="p-6 border-b border-gray-100 flex items-center justify-between">
+        <h3 id="dept-modal-title" class="font-bold text-gray-800 text-lg">Add Department</h3>
+        <button onclick="closeDeptModal()" class="text-gray-400 hover:text-gray-700 transition-colors">
+          <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+        </button>
+      </div>
+      <form id="dept-form" class="p-6 space-y-4">
+        <input type="hidden" id="dept-id" />
+        <div>
+          <label class="block text-sm font-medium text-gray-700 mb-1.5">Department Name</label>
+          <input type="text" id="dept-name" required placeholder="e.g. Computer Science"
+            class="w-full border border-gray-200 rounded-xl px-4 py-2.5 text-sm focus:ring-2 focus:ring-blue-500 outline-none bg-gray-50" />
+        </div>
+        <div>
+          <label class="block text-sm font-medium text-gray-700 mb-1.5">Department Code <span class="text-gray-400 font-normal">(optional)</span></label>
+          <input type="text" id="dept-code" placeholder="e.g. CS"
+            class="w-full border border-gray-200 rounded-xl px-4 py-2.5 text-sm focus:ring-2 focus:ring-blue-500 outline-none bg-gray-50" />
+        </div>
+        <div>
+          <label class="block text-sm font-medium text-gray-700 mb-1.5">Description <span class="text-gray-400 font-normal">(optional)</span></label>
+          <input type="text" id="dept-description" placeholder="Short description"
+            class="w-full border border-gray-200 rounded-xl px-4 py-2.5 text-sm focus:ring-2 focus:ring-blue-500 outline-none bg-gray-50" />
+        </div>
+        <div id="dept-modal-error" class="hidden bg-red-50 border border-red-200 text-red-700 rounded-xl p-3 text-sm"></div>
+        <div class="flex gap-3 pt-2">
+          <button type="button" onclick="closeDeptModal()" class="flex-1 bg-gray-100 text-gray-700 hover:bg-gray-200 py-2.5 rounded-xl text-sm font-medium transition-colors">Cancel</button>
+          <button type="submit" id="dept-submit-btn" class="flex-1 bg-blue-600 text-white hover:bg-blue-700 py-2.5 rounded-xl text-sm font-semibold transition-colors">Save Department</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- User Modal -->
+  <div id="user-modal" class="hidden fixed inset-0 modal-overlay flex items-center justify-center z-50 p-4">
+    <div class="bg-white rounded-2xl shadow-2xl w-full max-w-md fade-in">
+      <div class="p-6 border-b border-gray-100 flex items-center justify-between">
+        <h3 id="user-modal-title" class="font-bold text-gray-800 text-lg">Add User</h3>
+        <button onclick="closeUserModal()" class="text-gray-400 hover:text-gray-700 transition-colors">
+          <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+        </button>
+      </div>
+      <form id="user-form" class="p-6 space-y-4">
+        <input type="hidden" id="user-id" />
+        <div>
+          <label class="block text-sm font-medium text-gray-700 mb-1.5">Full Name</label>
+          <input type="text" id="user-name" required placeholder="John Doe"
+            class="w-full border border-gray-200 rounded-xl px-4 py-2.5 text-sm focus:ring-2 focus:ring-blue-500 outline-none bg-gray-50" />
+        </div>
+        <div>
+          <label class="block text-sm font-medium text-gray-700 mb-1.5">Email Address</label>
+          <input type="email" id="user-email" required placeholder="john@example.com"
+            class="w-full border border-gray-200 rounded-xl px-4 py-2.5 text-sm focus:ring-2 focus:ring-blue-500 outline-none bg-gray-50" />
+        </div>
+        <div>
+          <label class="block text-sm font-medium text-gray-700 mb-1.5">
+            Password <span id="password-hint" class="text-gray-400 font-normal">(required)</span>
+          </label>
+          <input type="password" id="user-password" placeholder="Enter password"
+            class="w-full border border-gray-200 rounded-xl px-4 py-2.5 text-sm focus:ring-2 focus:ring-blue-500 outline-none bg-gray-50" />
+        </div>
+        <div id="user-role-wrap">
+          <label class="block text-sm font-medium text-gray-700 mb-1.5">Role</label>
+          <select id="user-role" onchange="handleUserRoleChange()" class="w-full border border-gray-200 rounded-xl px-4 py-2.5 text-sm focus:ring-2 focus:ring-blue-500 outline-none bg-gray-50">
+            <option value="student">Student</option>
+            <option value="teacher">Teacher</option>
+            <option value="admin">Admin</option>
+          </select>
+        </div>
+        <div id="user-dept-wrap">
+          <label class="block text-sm font-medium text-gray-700 mb-1.5">Department</label>
+          <select id="user-department" class="w-full border border-gray-200 rounded-xl px-4 py-2.5 text-sm focus:ring-2 focus:ring-blue-500 outline-none bg-gray-50">
+            <option value="">— No Department —</option>
+          </select>
+        </div>
+        <div id="user-teacher-wrap">
+          <label class="block text-sm font-medium text-gray-700 mb-1.5">Assigned Teacher</label>
+          <select id="user-teacher" onchange="handleTeacherAssignChange()" class="w-full border border-gray-200 rounded-xl px-4 py-2.5 text-sm focus:ring-2 focus:ring-blue-500 outline-none bg-gray-50">
+            <option value="">— No Teacher Assigned —</option>
+          </select>
+        </div>
+        <div id="user-modal-error" class="hidden bg-red-50 border border-red-200 text-red-700 rounded-xl p-3 text-sm"></div>
+        <div class="flex gap-3 pt-2">
+          <button type="button" onclick="closeUserModal()" class="flex-1 bg-gray-100 text-gray-700 hover:bg-gray-200 py-2.5 rounded-xl text-sm font-medium transition-colors">Cancel</button>
+          <button type="submit" id="user-submit-btn" class="flex-1 bg-blue-600 text-white hover:bg-blue-700 py-2.5 rounded-xl text-sm font-semibold transition-colors flex items-center justify-center gap-2">
+            <span id="user-submit-text">Save User</span>
+            <div id="user-submit-spinner" class="hidden w-4 h-4 border-2 border-white border-t-transparent rounded-full spinner"></div>
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Manual Mark Modal -->
+  <div id="manual-modal" class="hidden fixed inset-0 modal-overlay flex items-center justify-center z-50 p-4">
+    <div class="bg-white rounded-2xl shadow-2xl w-full max-w-md fade-in">
+      <div class="p-6 border-b border-gray-100 flex items-center justify-between">
+        <h3 class="font-bold text-gray-800 text-lg">Mark Attendance Manually</h3>
+        <button onclick="closeManualMarkModal()" class="text-gray-400 hover:text-gray-700">
+          <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+        </button>
+      </div>
+      <div class="p-6 space-y-4">
+        <div>
+          <label class="block text-sm font-medium text-gray-700 mb-1.5">Select Student</label>
+          <select id="manual-user-select" class="w-full border border-gray-200 rounded-xl px-4 py-2.5 text-sm focus:ring-2 focus:ring-green-500 outline-none bg-gray-50">
+            <option value="">— Select a student —</option>
+          </select>
+        </div>
+        <div>
+          <label class="block text-sm font-medium text-gray-700 mb-1.5">Date</label>
+          <input type="date" id="manual-date" class="w-full border border-gray-200 rounded-xl px-4 py-2.5 text-sm focus:ring-2 focus:ring-green-500 outline-none bg-gray-50" />
+        </div>
+        <div>
+          <label class="block text-sm font-medium text-gray-700 mb-1.5">Status</label>
+          <select id="manual-status" class="w-full border border-gray-200 rounded-xl px-4 py-2.5 text-sm focus:ring-2 focus:ring-green-500 outline-none bg-gray-50">
+            <option value="present">Present</option>
+            <option value="late">Late</option>
+            <option value="late_approved">Late Approved</option>
+          </select>
+        </div>
+        <div id="manual-modal-error" class="hidden bg-red-50 border border-red-200 text-red-700 rounded-xl p-3 text-sm"></div>
+        <div class="flex gap-3 pt-2">
+          <button type="button" onclick="closeManualMarkModal()" class="flex-1 bg-gray-100 text-gray-700 hover:bg-gray-200 py-2.5 rounded-xl text-sm font-medium transition-colors">Cancel</button>
+          <button onclick="submitManualMark()" id="manual-submit-btn" class="flex-1 bg-green-600 text-white hover:bg-green-700 py-2.5 rounded-xl text-sm font-semibold transition-colors flex items-center justify-center gap-2">
+            <span id="manual-submit-text">Mark Present</span>
+            <div id="manual-submit-spinner" class="hidden w-4 h-4 border-2 border-white border-t-transparent rounded-full spinner"></div>
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Confirm Delete Modal -->
+  <div id="confirm-modal" class="hidden fixed inset-0 modal-overlay flex items-center justify-center z-50 p-4">
+    <div class="bg-white rounded-2xl shadow-2xl w-full max-w-sm fade-in p-6 text-center">
+      <div class="w-14 h-14 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
+        <svg class="w-7 h-7 text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
+      </div>
+      <h3 class="font-bold text-gray-800 text-lg mb-2">Confirm Delete</h3>
+      <p id="confirm-message" class="text-gray-500 text-sm mb-6">Are you sure you want to delete this record? This action cannot be undone.</p>
+      <div class="flex gap-3">
+        <button onclick="closeConfirmModal()" class="flex-1 bg-gray-100 text-gray-700 hover:bg-gray-200 py-2.5 rounded-xl text-sm font-medium transition-colors">Cancel</button>
+        <button onclick="confirmDelete()" id="confirm-delete-btn" class="flex-1 bg-red-600 text-white hover:bg-red-700 py-2.5 rounded-xl text-sm font-semibold transition-colors">Delete</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Toast -->
+  <div id="toast" class="fixed bottom-6 right-6 z-50 hidden">
+    <div id="toast-inner" class="flex items-center gap-3 px-4 py-3 rounded-xl shadow-lg text-sm font-medium min-w-64 max-w-sm">
+      <span id="toast-icon"></span>
+      <span id="toast-msg"></span>
+    </div>
+  </div>
+
+  <script>
+    const token = localStorage.getItem('adminToken');
+    if (!token) window.location.href = '/admin/login';
+
+    let currentUser = {
+      id: localStorage.getItem('userId') || '',
+      name: localStorage.getItem('adminName') || 'User',
+      role: localStorage.getItem('userRole') || 'student',
+      roleLabel: 'User',
+      department: localStorage.getItem('userDepartment') || '',
+      dataScope: 'own',
+      menus: [],
+      permissions: [],
+    };
+
+    // ── State ──────────────────────────────────────────────────
+    let currentSection = '';
+    let allUsers = [];
+    let allDepartments = [];
+    let allRoles = [];
+    let menuCatalog = [];
+    let permissionCatalog = [];
+    let todayRecords = [];
+    let historyRecords = [];
+    let filterDepartments = [];
+    let filterTeachers = [];
+    let filterRoles = [];
+    let pendingDeleteFn = null;
+    let calendarMonth = new Date().toISOString().slice(0, 7); // YYYY-MM
+
+    function hasPerm(perm) {
+      return currentUser.role === 'admin' || (currentUser.permissions || []).includes(perm);
+    }
+
+    function renderSidebarMenus() {
+      const nav = document.getElementById('sidebar-nav');
+      const allowedMenus = currentUser.menus || [];
+      const buttons = Array.from(nav.querySelectorAll('button[data-menu]'));
+
+      // Hide all first, then show and order according to allowedMenus
+      buttons.forEach(btn => btn.classList.add('hidden'));
+      for (const menuKey of allowedMenus) {
+        const btn = nav.querySelector(`button[data-menu="${menuKey}"]`);
+        if (btn) {
+          btn.classList.remove('hidden');
+          nav.appendChild(btn);
+        }
+      }
+    }
+
+    function applyRoleUI() {
+      document.getElementById('admin-name').textContent = currentUser.name;
+      document.getElementById('admin-avatar').textContent = currentUser.name.charAt(0).toUpperCase();
+
+      const label = currentUser.roleLabel || currentUser.role;
+      const deptSuffix = currentUser.department ? ` • ${currentUser.department}` : '';
+      document.getElementById('admin-role-label').textContent = `${label}${deptSuffix}`;
+
+      const isGlobalOrDept = currentUser.role === 'admin' || currentUser.dataScope === 'all' || currentUser.dataScope === 'department';
+      const isAssignedOnly = currentUser.dataScope === 'assigned_students';
+
+      document.getElementById('nav-users-label').textContent = isAssignedOnly ? 'My Students' : 'User Management';
+      document.getElementById('users-section-title').textContent = isAssignedOnly ? 'My Students' : 'User Management';
+      document.getElementById('add-user-btn-label').textContent = isAssignedOnly ? 'Add Student' : 'Add User';
+      document.getElementById('stat-total-label').textContent = isAssignedOnly ? 'My Students' : 'Registered Students';
+
+      const canFilterDept = currentUser.role === 'admin' || (hasPerm('filter_department') && currentUser.dataScope === 'all');
+      document.getElementById('today-admin-filters').classList.toggle('hidden', !canFilterDept);
+      document.getElementById('history-admin-filters').classList.toggle('hidden', !canFilterDept);
+      document.getElementById('users-admin-filters').classList.toggle('hidden', !isGlobalOrDept || currentUser.dataScope === 'department');
+
+      document.getElementById('today-export-btn').classList.toggle('hidden', !hasPerm('export_attendance'));
+      document.getElementById('history-export-btn').classList.toggle('hidden', !hasPerm('export_attendance'));
+      document.getElementById('today-manual-btn').classList.toggle('hidden', !hasPerm('manage_attendance'));
+      document.getElementById('users-add-btn').classList.toggle('hidden', !hasPerm('create_users'));
+
+      renderSidebarMenus();
+    }
+
+    async function loadFilters() {
+      try {
+        const data = await api('GET', '/filters');
+        if (!data?.success) return;
+        filterDepartments = data.departments || [];
+        filterTeachers = data.teachers || [];
+        filterRoles = data.roles || [];
+
+        const deptOptions = '<option value="">All Departments</option>' +
+          filterDepartments.map(d => `<option value="${esc(d)}">${esc(d)}</option>`).join('');
+        const teacherOptions = '<option value="">All Teachers</option>' +
+          filterTeachers.map(t => `<option value="${t.id}">${esc(t.name)}${t.department ? ' (' + esc(t.department) + ')' : ''}</option>`).join('');
+
+        ['today-filter-dept', 'history-filter-dept', 'users-filter-dept'].forEach(id => {
+          const el = document.getElementById(id);
+          if (el) {
+            const prev = el.value;
+            el.innerHTML = deptOptions;
+            if (prev) el.value = prev;
+          }
+        });
+
+        ['today-filter-teacher', 'history-filter-teacher'].forEach(id => {
+          const el = document.getElementById(id);
+          if (el) {
+            const prev = el.value;
+            el.innerHTML = teacherOptions;
+            if (prev) el.value = prev;
+          }
+        });
+
+        if (filterRoles.length) {
+          const roleFilterEl = document.getElementById('users-filter-role');
+          if (roleFilterEl) {
+            const prev = roleFilterEl.value;
+            roleFilterEl.innerHTML = '<option value="">All Roles</option>' +
+              filterRoles.map(r => `<option value="${esc(r.name)}">${esc(r.label)}</option>`).join('');
+            if (prev) roleFilterEl.value = prev;
+          }
+          const userRoleSelect = document.getElementById('user-role');
+          if (userRoleSelect) {
+            const prev = userRoleSelect.value;
+            userRoleSelect.innerHTML = filterRoles.map(r => `<option value="${esc(r.name)}">${esc(r.label)}</option>`).join('');
+            if (prev) userRoleSelect.value = prev;
+          }
+        }
+
+        const userDeptSelect = document.getElementById('user-department');
+        if (userDeptSelect) {
+          const prev = userDeptSelect.value;
+          userDeptSelect.innerHTML = '<option value="">— No Department —</option>' +
+            filterDepartments.map(d => `<option value="${esc(d)}">${esc(d)}</option>`).join('');
+          if (prev) userDeptSelect.value = prev;
+        }
+
+        const userTeacherSelect = document.getElementById('user-teacher');
+        if (userTeacherSelect) {
+          const prev = userTeacherSelect.value;
+          userTeacherSelect.innerHTML = '<option value="">— No Teacher Assigned —</option>' +
+            filterTeachers.map(t => `<option value="${t.id}" data-dept="${esc(t.department || '')}">${esc(t.name)}${t.department ? ' (' + esc(t.department) + ')' : ''}</option>`).join('');
+          if (prev) userTeacherSelect.value = prev;
+        }
+      } catch (e) {
+        console.error('Failed to load filters:', e);
+      }
+    }
+
+    // ── Clock ──────────────────────────────────────────────────
+    function updateClock() {
+      document.getElementById('current-time').textContent =
+        new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+    }
+    updateClock();
+    setInterval(updateClock, 1000);
+
+    // ── API helper ─────────────────────────────────────────────
+    async function api(method, path, body) {
+      const opts = {
+        method,
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+      };
+      if (body) opts.body = JSON.stringify(body);
+      const res = await fetch('/api/admin' + path, opts);
+      if (res.status === 401) { logout(); return; }
+      return res.json();
+    }
+
+    // ── Toast ──────────────────────────────────────────────────
+    let toastTimer;
+    function showToast(type, msg) {
+      const configs = {
+        success: { bg: 'bg-green-600 text-white', icon: '✅' },
+        error:   { bg: 'bg-red-600 text-white', icon: '❌' },
+        info:    { bg: 'bg-blue-600 text-white', icon: 'ℹ️' },
+        warning: { bg: 'bg-yellow-500 text-white', icon: '⚠️' },
+      };
+      const cfg = configs[type] || configs.info;
+      const inner = document.getElementById('toast-inner');
+      inner.className = `flex items-center gap-3 px-4 py-3 rounded-xl shadow-lg text-sm font-medium min-w-64 max-w-sm ${cfg.bg}`;
+      document.getElementById('toast-icon').textContent = cfg.icon;
+      document.getElementById('toast-msg').textContent = msg;
+      const toastEl = document.getElementById('toast');
+      toastEl.classList.remove('hidden');
+      clearTimeout(toastTimer);
+      toastTimer = setTimeout(() => toastEl.classList.add('hidden'), 3500);
+    }
+
+    // ── Section navigation ─────────────────────────────────────
+    const sectionTitles = {
+      dashboard:     'Dashboard',
+      today:         "Today's Attendance",
+      history:       'Attendance History',
+      departments:   'Departments',
+      users:         'User Management',
+      link:          'Link Manager',
+      roles:         'Roles & RBAC',
+      my_profile:    'My Profile',
+      my_attendance: 'My Attendance',
+    };
+
+    function showSection(name) {
+      if (!document.getElementById(`section-${name}`)) return;
+      document.querySelectorAll('section[id^="section-"]').forEach(s => s.classList.add('hidden'));
+      document.getElementById(`section-${name}`).classList.remove('hidden');
+
+      document.querySelectorAll('.nav-item').forEach(el => el.classList.remove('active'));
+      const activeBtn = document.querySelector(`.nav-item[data-menu="${name}"]`);
+      if (activeBtn) activeBtn.classList.add('active');
+
+      document.getElementById('page-title').textContent = sectionTitles[name] || 'Portal';
+      currentSection = name;
+
+      if (name === 'dashboard') loadDashboard();
+      if (name === 'today') loadToday();
+      if (name === 'departments') loadDepartments();
+      if (name === 'users') loadUsers();
+      if (name === 'link') loadLink();
+      if (name === 'roles') loadRoles();
+      if (name === 'my_profile') loadMyProfile();
+      if (name === 'my_attendance') loadMyAttendance();
+    }
+
+    function refreshCurrentSection() {
+      const icon = document.getElementById('refresh-icon');
+      icon.classList.add('spinner');
+      setTimeout(() => icon.classList.remove('spinner'), 800);
+      showSection(currentSection);
+    }
+
+    // ── DASHBOARD ──────────────────────────────────────────────
+    async function loadDashboard() {
+      try {
+        const data = await api('GET', '/attendance/today');
+        if (!data) return;
+
+        document.getElementById('stat-total').textContent = data.total;
+        document.getElementById('stat-present').textContent = data.present;
+        document.getElementById('stat-absent').textContent = data.absent;
+
+        const badge = document.getElementById('today-badge');
+        badge.textContent = data.present;
+        badge.classList.remove('hidden');
+
+        document.getElementById('page-subtitle').textContent = `Today is ${data.date}`;
+
+        todayRecords = data.records || [];
+        const tbody = document.getElementById('dashboard-table-body');
+        if (!todayRecords.length) {
+          tbody.innerHTML = '<tr><td colspan="5" class="text-center py-8 text-gray-400">No attendance marked yet today.</td></tr>';
+          return;
+        }
+        tbody.innerHTML = todayRecords.slice(0, 5).map(r => `
+          <tr class="border-t border-gray-50">
+            <td class="px-5 py-3.5 text-sm font-medium text-gray-900">${esc(r.user?.name)}</td>
+            <td class="px-5 py-3.5 text-sm text-gray-500">${esc(r.user?.email)}</td>
+            <td class="px-5 py-3.5 text-sm text-gray-500">${esc(r.user?.department || r.user?.teacher?.department || '—')}</td>
+            <td class="px-5 py-3.5 text-sm text-gray-500">${formatTime(r.markedAt)}</td>
+            <td class="px-5 py-3.5">${flagBadges(r)}</td>
+          </tr>`).join('');
+      } catch (e) {
+        showToast('error', 'Failed to load dashboard data.');
+      }
+    }
+
+    // ── TODAY'S ATTENDANCE ─────────────────────────────────────
+    async function loadToday() {
+      try {
+        const params = new URLSearchParams();
+        const canFilterDept = currentUser.role === 'admin' || (hasPerm('filter_department') && currentUser.dataScope === 'all');
+        if (canFilterDept) {
+          const dept = document.getElementById('today-filter-dept')?.value;
+          const teacherId = document.getElementById('today-filter-teacher')?.value;
+          if (dept) params.set('department', dept);
+          if (teacherId) params.set('teacherId', teacherId);
+        }
+        const qs = params.toString() ? `?${params.toString()}` : '';
+        const data = await api('GET', `/attendance/today${qs}`);
+        if (!data) return;
+        todayRecords = data.records || [];
+
+        const infoEl = document.getElementById('today-filter-info');
+        if (canFilterDept && (params.has('department') || params.has('teacherId'))) {
+          infoEl.textContent = `Filtered: ${data.present} present, ${data.absent} absent out of ${data.total} matching students.`;
+          infoEl.classList.remove('hidden');
+        } else {
+          infoEl.classList.add('hidden');
+        }
+
+        renderTodayTable();
+      } catch (e) {
+        showToast('error', 'Failed to load attendance.');
+      }
+    }
+
+    function statusPill(status) {
+      if (status === 'late') {
+        return '<span class="px-2.5 py-0.5 rounded-full text-xs font-semibold bg-amber-100 text-amber-800">Late</span>';
+      }
+      if (status === 'late_approved') {
+        return '<span class="px-2.5 py-0.5 rounded-full text-xs font-semibold bg-lime-100 text-lime-800">Late Approved</span>';
+      }
+      return '<span class="px-2.5 py-0.5 rounded-full text-xs font-semibold bg-green-100 text-green-700">Present</span>';
+    }
+
+    async function updateAttendanceStatus(id, status) {
+      try {
+        const data = await api('PUT', `/attendance/${id}`, { status });
+        if (data?.success) {
+          showToast('success', 'Attendance status updated.');
+          if (currentSection === 'today') loadToday();
+          if (currentSection === 'history') fetchHistory();
+        } else {
+          showToast('error', data?.message || 'Status update failed.');
+        }
+      } catch (e) {
+        showToast('error', 'Failed to update status.');
+      }
+    }
+
+    function renderTodayTable() {
+      const tbody = document.getElementById('today-table-body');
+      const canManage = hasPerm('manage_attendance');
+      if (!todayRecords.length) {
+        tbody.innerHTML = '<tr><td colspan="10" class="text-center py-10 text-gray-400">No attendance records for today.</td></tr>';
+        return;
+      }
+      tbody.innerHTML = todayRecords.map(r => {
+        const st = r.status || 'present';
+        const statusCell = canManage
+          ? `<select onchange="updateAttendanceStatus('${r.id}', this.value)" class="border border-gray-200 rounded-lg px-2 py-1 text-xs font-semibold bg-white focus:ring-2 focus:ring-blue-500 outline-none">
+              <option value="present" ${st === 'present' ? 'selected' : ''}>Present</option>
+              <option value="late" ${st === 'late' ? 'selected' : ''}>Late</option>
+              <option value="late_approved" ${st === 'late_approved' ? 'selected' : ''}>Late Approved</option>
+            </select>`
+          : statusPill(st);
+        return `
+        <tr class="border-t border-gray-50">
+          <td class="px-5 py-3.5 text-sm font-medium text-gray-900">${esc(r.user?.name)}</td>
+          <td class="px-5 py-3.5 text-sm text-gray-500">${esc(r.user?.email)}</td>
+          <td class="px-5 py-3.5 text-sm text-gray-500">${esc(r.user?.department || r.user?.teacher?.department || '—')}</td>
+          <td class="px-5 py-3.5 text-sm text-gray-500">${esc(r.user?.teacher?.name || '—')}</td>
+          <td class="px-5 py-3.5 text-sm text-gray-500 whitespace-nowrap">${formatTime(r.markedAt)}</td>
+          <td class="px-5 py-3.5">${statusCell}</td>
+          <td class="px-5 py-3.5 text-sm text-gray-500 font-mono">${esc(r.ipAddress || '—')}</td>
+          <td class="px-5 py-3.5 text-sm text-gray-500 font-mono">${esc(r.macAddress || '—')}</td>
+          <td class="px-5 py-3.5">${flagBadges(r)}</td>
+          <td class="px-5 py-3.5">
+            ${canManage ? `
+            <button onclick="deleteAttendance('${r.id}')" class="text-red-400 hover:text-red-600 transition-colors" title="Delete">
+              <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
+            </button>` : '<span class="text-gray-300 text-xs">—</span>'}
+          </td>
+        </tr>`;
+      }).join('');
+    }
+
+    async function deleteAttendance(id) {
+      pendingDeleteFn = async () => {
+        const data = await api('DELETE', `/attendance/${id}`);
+        if (data?.success) {
+          showToast('success', 'Attendance record deleted.');
+          loadToday();
+        } else {
+          showToast('error', data?.message || 'Delete failed.');
+        }
+      };
+      document.getElementById('confirm-message').textContent = 'Delete this attendance record? This cannot be undone.';
+      document.getElementById('confirm-modal').classList.remove('hidden');
+    }
+
+    // ── HISTORY ────────────────────────────────────────────────
+    async function fetchHistory() {
+      const date = document.getElementById('history-date').value;
+      if (!date) { showToast('warning', 'Please select a date.'); return; }
+
+      try {
+        const params = new URLSearchParams({ date });
+        const canFilterDept = currentUser.role === 'admin' || (hasPerm('filter_department') && currentUser.dataScope === 'all');
+        if (canFilterDept) {
+          const dept = document.getElementById('history-filter-dept')?.value;
+          const teacherId = document.getElementById('history-filter-teacher')?.value;
+          if (dept) params.set('department', dept);
+          if (teacherId) params.set('teacherId', teacherId);
+        }
+
+        const data = await api('GET', `/attendance?${params.toString()}`);
+        if (!data) return;
+        historyRecords = data.records || [];
+
+        const info = document.getElementById('history-info');
+        info.textContent = `${data.date}: ${data.present} present, ${data.absent} absent out of ${data.total} students.`;
+        info.classList.remove('hidden');
+
+        const tbody = document.getElementById('history-table-body');
+        const canManage = hasPerm('manage_attendance');
+        if (!historyRecords.length) {
+          tbody.innerHTML = '<tr><td colspan="10" class="text-center py-10 text-gray-400">No records found for this date.</td></tr>';
+          return;
+        }
+        tbody.innerHTML = historyRecords.map(r => {
+          const st = r.status || 'present';
+          const statusCell = canManage
+            ? `<select onchange="updateAttendanceStatus('${r.id}', this.value)" class="border border-gray-200 rounded-lg px-2 py-1 text-xs font-semibold bg-white focus:ring-2 focus:ring-blue-500 outline-none">
+                <option value="present" ${st === 'present' ? 'selected' : ''}>Present</option>
+                <option value="late" ${st === 'late' ? 'selected' : ''}>Late</option>
+                <option value="late_approved" ${st === 'late_approved' ? 'selected' : ''}>Late Approved</option>
+              </select>`
+            : statusPill(st);
+          return `
+          <tr class="border-t border-gray-50">
+            <td class="px-5 py-3.5 text-sm font-medium text-gray-900">${esc(r.user?.name)}</td>
+            <td class="px-5 py-3.5 text-sm text-gray-500">${esc(r.user?.email)}</td>
+            <td class="px-5 py-3.5 text-sm text-gray-500">${esc(r.user?.department || r.user?.teacher?.department || '—')}</td>
+            <td class="px-5 py-3.5 text-sm text-gray-500">${esc(r.user?.teacher?.name || '—')}</td>
+            <td class="px-5 py-3.5 text-sm text-gray-500">${r.date}</td>
+            <td class="px-5 py-3.5 text-sm text-gray-500 whitespace-nowrap">${formatTime(r.markedAt)}</td>
+            <td class="px-5 py-3.5">${statusCell}</td>
+            <td class="px-5 py-3.5 text-sm text-gray-500 font-mono">${esc(r.ipAddress || '—')}</td>
+            <td class="px-5 py-3.5 text-sm text-gray-500 font-mono">${esc(r.macAddress || '—')}</td>
+            <td class="px-5 py-3.5">${flagBadges(r)}</td>
+          </tr>`;
+        }).join('');
+      } catch (e) {
+        showToast('error', 'Failed to fetch history.');
+      }
+    }
+
+    // ── USERS ──────────────────────────────────────────────────
+    async function loadUsers() {
+      try {
+        const params = new URLSearchParams();
+        if (currentUser.role === 'admin') {
+          const role = document.getElementById('users-filter-role')?.value;
+          const dept = document.getElementById('users-filter-dept')?.value;
+          if (role) params.set('role', role);
+          if (dept) params.set('department', dept);
+        }
+        const qs = params.toString() ? `?${params.toString()}` : '';
+        const data = await api('GET', `/users${qs}`);
+        if (!data) return;
+        allUsers = data.users || [];
+        renderUsersTable();
+      } catch (e) {
+        showToast('error', 'Failed to load users.');
+      }
+    }
+
+    function roleBadge(role) {
+      if (role === 'admin') return '<span class="px-2.5 py-1 rounded-full text-xs font-semibold bg-purple-100 text-purple-700">admin</span>';
+      if (role === 'teacher') return '<span class="px-2.5 py-1 rounded-full text-xs font-semibold bg-amber-100 text-amber-700">teacher</span>';
+      if (role === 'hr') return '<span class="px-2.5 py-1 rounded-full text-xs font-semibold bg-emerald-100 text-emerald-700">hr</span>';
+      if (role === 'student') return '<span class="px-2.5 py-1 rounded-full text-xs font-semibold bg-blue-100 text-blue-700">student</span>';
+      return `<span class="px-2.5 py-1 rounded-full text-xs font-semibold bg-slate-100 text-slate-700">${esc(role)}</span>`;
+    }
+
+    function renderUsersTable() {
+      const tbody = document.getElementById('users-table-body');
+      const canEdit = hasPerm('edit_users');
+      const canDelete = hasPerm('delete_users');
+      if (!allUsers.length) {
+        tbody.innerHTML = '<tr><td colspan="7" class="text-center py-10 text-gray-400">No users found.</td></tr>';
+        return;
+      }
+      tbody.innerHTML = allUsers.map(u => {
+        let relationText = '—';
+        if (u.role === 'student') {
+          relationText = u.teacher?.name ? `👨‍🏫 ${esc(u.teacher.name)}` : '<span class="text-gray-400">Unassigned</span>';
+        } else if (u.role === 'teacher') {
+          const count = u._count?.students ?? 0;
+          relationText = `<span class="text-xs font-medium text-amber-700 bg-amber-50 px-2 py-0.5 rounded-full">${count} student${count === 1 ? '' : 's'}</span>`;
+        }
+        return `
+        <tr class="border-t border-gray-50">
+          <td class="px-5 py-3.5 text-sm font-medium text-gray-900">${esc(u.name)}</td>
+          <td class="px-5 py-3.5 text-sm text-gray-500">${esc(u.email)}</td>
+          <td class="px-5 py-3.5">${roleBadge(u.role)}</td>
+          <td class="px-5 py-3.5 text-sm text-gray-500">${esc(u.department || '—')}</td>
+          <td class="px-5 py-3.5 text-sm text-gray-600">${relationText}</td>
+          <td class="px-5 py-3.5 text-sm text-gray-500">${formatDate(u.createdAt)}</td>
+          <td class="px-5 py-3.5 flex items-center gap-2">
+            ${canEdit ? `
+            <button onclick='openUserModal(${JSON.stringify(u)})' class="text-blue-400 hover:text-blue-600 transition-colors" title="Edit">
+              <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/></svg>
+            </button>` : ''}
+            ${canDelete ? `
+            <button onclick="deleteUser('${u.id}', '${esc(u.name)}')" class="text-red-400 hover:text-red-600 transition-colors" title="Delete">
+              <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
+            </button>` : ''}
+            ${!canEdit && !canDelete ? '<span class="text-gray-300 text-xs">—</span>' : ''}
+          </td>
+        </tr>`;
+      }).join('');
+    }
+
+    function handleUserRoleChange() {
+      const role = document.getElementById('user-role').value;
+      const canAssignTeacher = currentUser.role === 'admin' || currentUser.dataScope === 'all';
+      document.getElementById('user-teacher-wrap').classList.toggle('hidden', !canAssignTeacher || role !== 'student');
+      document.getElementById('user-dept-wrap').classList.toggle('hidden', role === 'admin');
+    }
+
+    function handleTeacherAssignChange() {
+      const select = document.getElementById('user-teacher');
+      const deptInput = document.getElementById('user-department');
+      const selectedOpt = select.options[select.selectedIndex];
+      const teacherDept = selectedOpt?.getAttribute('data-dept');
+      if (teacherDept && !deptInput.value.trim()) {
+        deptInput.value = teacherDept;
+      }
+    }
+
+    async function openUserModal(user) {
+      if ((currentUser.role === 'admin' || currentUser.dataScope === 'all') && !filterTeachers.length) {
+        await loadFilters();
+      }
+      document.getElementById('user-modal-error').classList.add('hidden');
+      const isEdit = !!user;
+      const isAssignedScope = currentUser.dataScope === 'assigned_students';
+      const canChooseRole = !isAssignedScope;
+
+      document.getElementById('user-modal-title').textContent = isEdit
+        ? (isAssignedScope ? 'Edit Student' : 'Edit User')
+        : (isAssignedScope ? 'Add Student' : 'Add User');
+      document.getElementById('user-id').value         = user?.id || '';
+      document.getElementById('user-name').value       = user?.name || '';
+      document.getElementById('user-email').value      = user?.email || '';
+      document.getElementById('user-password').value   = '';
+      document.getElementById('user-role').value       = canChooseRole ? (user?.role || 'student') : 'student';
+      const deptVal = user?.department || (isAssignedScope ? (currentUser.department || '') : '');
+      const deptSel = document.getElementById('user-department');
+      if (deptVal && !Array.from(deptSel.options).some(o => o.value === deptVal)) {
+        const opt = document.createElement('option');
+        opt.value = deptVal;
+        opt.textContent = deptVal;
+        deptSel.appendChild(opt);
+      }
+      deptSel.value = deptVal;
+      document.getElementById('user-teacher').value    = user?.teacherId || '';
+
+      document.getElementById('user-role-wrap').classList.toggle('hidden', !canChooseRole);
+      handleUserRoleChange();
+
+      document.getElementById('password-hint').textContent = isEdit ? '(leave blank to keep current)' : '(required)';
+      document.getElementById('user-submit-text').textContent = isEdit ? 'Update' : 'Save';
+      document.getElementById('user-modal').classList.remove('hidden');
+    }
+
+    function closeUserModal() {
+      document.getElementById('user-modal').classList.add('hidden');
+    }
+
+    document.getElementById('user-form').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const errEl = document.getElementById('user-modal-error');
+      errEl.classList.add('hidden');
+
+      const id         = document.getElementById('user-id').value;
+      const name       = document.getElementById('user-name').value.trim();
+      const email      = document.getElementById('user-email').value.trim();
+      const password   = document.getElementById('user-password').value;
+      const role       = document.getElementById('user-role').value;
+      const department = document.getElementById('user-department').value.trim();
+      const teacherId  = document.getElementById('user-teacher').value;
+
+      if (!id && !password) { errEl.textContent = 'Password is required for new users.'; errEl.classList.remove('hidden'); return; }
+
+      const btn = document.getElementById('user-submit-btn');
+      const txt = document.getElementById('user-submit-text');
+      const spn = document.getElementById('user-submit-spinner');
+      btn.disabled = true; txt.textContent = 'Saving…'; spn.classList.remove('hidden');
+
+      try {
+        const body = { name, email, role, department: department || null };
+        if (role === 'student' && currentUser.role === 'admin') {
+          body.teacherId = teacherId || null;
+        }
+        if (password) body.password = password;
+
+        const data = id
+          ? await api('PUT', `/users/${id}`, body)
+          : await api('POST', '/users', body);
+
+        if (data?.success) {
+          showToast('success', id ? 'User updated successfully.' : 'User created successfully.');
+          closeUserModal();
+          await loadFilters();
+          loadUsers();
+        } else {
+          errEl.textContent = data?.message || 'Operation failed.';
+          errEl.classList.remove('hidden');
+        }
+      } catch (err) {
+        errEl.textContent = 'Network error.';
+        errEl.classList.remove('hidden');
+      } finally {
+        btn.disabled = false;
+        txt.textContent = id ? 'Update' : 'Save';
+        spn.classList.add('hidden');
+      }
+    });
+
+    async function deleteUser(id, name) {
+      pendingDeleteFn = async () => {
+        const data = await api('DELETE', `/users/${id}`);
+        if (data?.success) {
+          showToast('success', `User "${name}" deleted.`);
+          loadUsers();
+        } else {
+          showToast('error', data?.message || 'Delete failed.');
+        }
+      };
+      document.getElementById('confirm-message').textContent = `Delete user "${name}" and all their attendance records? This cannot be undone.`;
+      document.getElementById('confirm-modal').classList.remove('hidden');
+    }
+
+    // ── LINK MANAGER ───────────────────────────────────────────
+    let countdownInterval = null;
+
+    async function loadLink() {
+      try {
+        const data = await api('GET', '/link');
+        if (!data) return;
+
+        document.getElementById('link-active-card').classList.add('hidden');
+        document.getElementById('link-expired-card').classList.add('hidden');
+        document.getElementById('link-none-card').classList.add('hidden');
+        clearInterval(countdownInterval);
+
+        if (!data.link) {
+          document.getElementById('link-none-card').classList.remove('hidden');
+        } else if (data.link.isExpired) {
+          document.getElementById('link-expired-card').classList.remove('hidden');
+        } else {
+          document.getElementById('link-active-card').classList.remove('hidden');
+          const urlEl = document.getElementById('link-url-display');
+          urlEl.textContent = data.link.url;
+          urlEl.href = data.link.url;
+          document.getElementById('link-date-badge').textContent = data.link.date;
+
+          if (data.link.remainingMs && data.link.remainingMs > 0) {
+            document.getElementById('link-timer-badge').classList.remove('hidden');
+            document.getElementById('link-no-timer-badge').classList.add('hidden');
+            startCountdown(data.link.remainingMs);
+          } else {
+            document.getElementById('link-timer-badge').classList.add('hidden');
+            document.getElementById('link-no-timer-badge').classList.remove('hidden');
+          }
+        }
+
+        renderLinkHistory(data.history || []);
+      } catch (e) {
+        showToast('error', 'Failed to load link.');
+      }
+    }
+
+    function startCountdown(remainingMs) {
+      clearInterval(countdownInterval);
+      const endAt = Date.now() + remainingMs;
+
+      function updateDisplay() {
+        const ms = endAt - Date.now();
+        if (ms <= 0) {
+          clearInterval(countdownInterval);
+          document.getElementById('link-countdown').textContent = '00:00:00';
+          setTimeout(() => loadLink(), 1000);
+          return;
+        }
+        const totalSecs = Math.ceil(ms / 1000);
+        const h = Math.floor(totalSecs / 3600);
+        const m = Math.floor((totalSecs % 3600) / 60);
+        const s = totalSecs % 60;
+        document.getElementById('link-countdown').textContent =
+          `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`;
+      }
+
+      updateDisplay();
+      countdownInterval = setInterval(updateDisplay, 1000);
+    }
+
+    function showCreateLinkForm() {
+      document.getElementById('link-create-card').classList.remove('hidden');
+      document.getElementById('link-create-card').scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    }
+
+    function hideCreateLinkForm() {
+      document.getElementById('link-create-card').classList.add('hidden');
+    }
+
+    function toggleCustomDuration(val) {
+      const row = document.getElementById('custom-duration-row');
+      if (val === 'custom') {
+        row.classList.remove('hidden');
+      } else {
+        row.classList.add('hidden');
+      }
+    }
+
+    async function createLink() {
+      const btn = document.getElementById('create-link-btn');
+      const selectVal = document.getElementById('link-duration-select').value;
+
+      let durationMinutes = null;
+      if (selectVal === 'custom') {
+        const customVal = parseInt(document.getElementById('link-custom-minutes').value, 10);
+        if (!customVal || customVal < 1) {
+          showToast('error', 'Please enter a valid duration in minutes.');
+          return;
+        }
+        durationMinutes = customVal;
+      } else if (selectVal !== '0') {
+        durationMinutes = parseInt(selectVal, 10);
+      }
+
+      const lateAfter = document.getElementById('link-late-after')?.value || null;
+
+      btn.disabled = true;
+      btn.textContent = 'Creating…';
+
+      try {
+        const data = await api('POST', '/link/create', { durationMinutes, lateAfter });
+        if (!data?.success) throw new Error(data?.message || 'Failed to create link.');
+
+        showToast('success', 'Attendance link created successfully!');
+        hideCreateLinkForm();
+        document.getElementById('link-duration-select').value = '0';
+        document.getElementById('link-custom-minutes').value = '';
+        if (document.getElementById('link-late-after')) document.getElementById('link-late-after').value = '';
+        toggleCustomDuration('0');
+        loadLink();
+      } catch (err) {
+        showToast('error', err.message || 'Failed to create link.');
+      } finally {
+        btn.disabled = false;
+        btn.textContent = 'Create Link';
+      }
+    }
+
+    async function deactivateLink() {
+      if (!confirm('Deactivate the current attendance link? Students will not be able to mark attendance until a new link is created.')) return;
+
+      try {
+        const data = await api('POST', '/link/deactivate');
+        if (!data?.success) throw new Error(data?.message || 'Failed to deactivate link.');
+        showToast('success', 'Link deactivated.');
+        clearInterval(countdownInterval);
+        loadLink();
+      } catch (err) {
+        showToast('error', err.message || 'Failed to deactivate link.');
+      }
+    }
+
+    function copyLink() {
+      const url = document.getElementById('link-url-display').textContent;
+      if (!url) return;
+      navigator.clipboard.writeText(url)
+        .then(() => showToast('success', 'Link copied to clipboard!'))
+        .catch(() => showToast('error', 'Could not copy link.'));
+    }
+
+    function renderLinkHistory(history) {
+      const container = document.getElementById('link-history-list');
+      if (!history.length) {
+        container.innerHTML = '<p class="text-gray-400 text-sm">No links created today yet.</p>';
+        return;
+      }
+      container.innerHTML = `<div class="space-y-2">${history.map(item => {
+        let statusBadge = '<span class="px-2 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-600">Deactivated</span>';
+        if (item.isActive && item.isExpired) {
+          statusBadge = '<span class="px-2 py-0.5 rounded-full text-xs font-medium bg-amber-100 text-amber-700">Expired</span>';
+        } else if (item.isActive) {
+          statusBadge = '<span class="px-2 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-700">Active</span>';
+        }
+        const timerLabel = item.durationMinutes ? `${item.durationMinutes} min` : 'No expiry';
+        const creatorLabel = item.createdBy ? `by ${esc(item.createdBy.name)} (${esc(item.createdBy.role)})` : '';
+        return `
+          <div class="flex flex-wrap items-center justify-between gap-2 py-2 px-3 bg-gray-50 rounded-xl text-xs">
+            <div class="flex flex-wrap items-center gap-3">
+              <span class="font-mono text-gray-600">${esc(item.tokenPreview)}</span>
+              <span class="text-gray-400">Created ${formatTime(item.createdAt)}</span>
+              <span class="text-gray-500">⏱ ${timerLabel}</span>
+              ${creatorLabel ? `<span class="text-gray-500">${creatorLabel}</span>` : ''}
+            </div>
+            ${statusBadge}
+          </div>
+        `;
+      }).join('')}</div>`;
+    }
+
+    // ── MANUAL MARK ────────────────────────────────────────────
+    async function openManualMarkModal() {
+      if (!allUsers.length) {
+        await loadUsers();
+      }
+      const select = document.getElementById('manual-user-select');
+      select.innerHTML = '<option value="">— Select a student —</option>' +
+        allUsers.filter(u => u.role === 'student').map(u => {
+          const dept = u.department ? ` - ${esc(u.department)}` : '';
+          return `<option value="${u.id}">${esc(u.name)} (${esc(u.email)}${dept})</option>`;
+        }).join('');
+      document.getElementById('manual-date').value = new Date().toISOString().split('T')[0];
+      document.getElementById('manual-modal-error').classList.add('hidden');
+      document.getElementById('manual-modal').classList.remove('hidden');
+    }
+
+    function closeManualMarkModal() {
+      document.getElementById('manual-modal').classList.add('hidden');
+    }
+
+    async function submitManualMark() {
+      const userId = document.getElementById('manual-user-select').value;
+      const date   = document.getElementById('manual-date').value;
+      const status = document.getElementById('manual-status').value;
+      const errEl  = document.getElementById('manual-modal-error');
+      errEl.classList.add('hidden');
+
+      if (!userId) { errEl.textContent = 'Please select a student.'; errEl.classList.remove('hidden'); return; }
+      if (!date)   { errEl.textContent = 'Please select a date.';    errEl.classList.remove('hidden'); return; }
+
+      const btn = document.getElementById('manual-submit-btn');
+      const txt = document.getElementById('manual-submit-text');
+      const spn = document.getElementById('manual-submit-spinner');
+      btn.disabled = true; txt.textContent = 'Marking…'; spn.classList.remove('hidden');
+
+      try {
+        const data = await api('POST', '/attendance', { userId, date, status });
+        if (data?.success) {
+          showToast('success', 'Attendance marked manually.');
+          closeManualMarkModal();
+          loadToday();
+        } else {
+          errEl.textContent = data?.message || 'Operation failed.';
+          errEl.classList.remove('hidden');
+        }
+      } catch (err) {
+        errEl.textContent = 'Network error.';
+        errEl.classList.remove('hidden');
+      } finally {
+        btn.disabled = false;
+        txt.textContent = 'Mark Present';
+        spn.classList.add('hidden');
+      }
+    }
+
+    // ── CONFIRM MODAL ──────────────────────────────────────────
+    function closeConfirmModal() {
+      document.getElementById('confirm-modal').classList.add('hidden');
+      pendingDeleteFn = null;
+    }
+
+    async function confirmDelete() {
+      if (pendingDeleteFn) await pendingDeleteFn();
+      closeConfirmModal();
+    }
+
+    // ── CSV DOWNLOAD ───────────────────────────────────────────
+    function downloadCSV(source) {
+      const records = source === 'today' ? todayRecords : historyRecords;
+      if (!records.length) { showToast('warning', 'No records to export.'); return; }
+
+      const headers = ['Name', 'Email', 'Department', 'Teacher', 'Date', 'Time', 'Status', 'IP Address', 'MAC Address', 'IP Changed', 'MAC Changed'];
+      const rows = records.map(r => [
+        r.user?.name, r.user?.email,
+        r.user?.department || r.user?.teacher?.department || '',
+        r.user?.teacher?.name || '',
+        r.date, formatTime(r.markedAt), r.status || 'present', r.ipAddress, r.macAddress,
+        r.ipChanged ? 'Yes' : 'No', r.macChanged ? 'Yes' : 'No',
+      ]);
+
+      const csv = [headers, ...rows].map(row =>
+        row.map(v => `"${String(v ?? '').replace(/"/g, '""')}"`).join(',')
+      ).join('\n');
+
+      const blob = new Blob([csv], { type: 'text/csv' });
+      const url  = URL.createObjectURL(blob);
+      const a    = document.createElement('a');
+      a.href     = url;
+      a.download = `attendance_${source === 'today' ? new Date().toISOString().split('T')[0] : (document.getElementById('history-date')?.value || 'history')}.csv`;
+      a.click();
+      URL.revokeObjectURL(url);
+      showToast('success', 'CSV downloaded!');
+    }
+
+    // ── HELPERS ────────────────────────────────────────────────
+    function esc(s) {
+      if (s == null) return '';
+      return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+    }
+
+    function formatTime(ts) {
+      if (!ts) return '—';
+      return new Date(ts).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+    }
+
+    function formatDate(ts) {
+      if (!ts) return '—';
+      return new Date(ts).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' });
+    }
+
+    function flagBadges(r) {
+      let html = '';
+      if (r.ipChanged)  html += '<span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-semibold badge-ip mr-1">⚠️ IP Changed</span>';
+      if (r.macChanged) html += '<span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-semibold badge-mac">⚠️ MAC Changed</span>';
+      if (!r.ipChanged && !r.macChanged) html = '<span class="text-gray-400 text-xs">—</span>';
+      return html;
+    }
+
+    function logout() {
+      localStorage.removeItem('adminToken');
+      localStorage.removeItem('adminName');
+      localStorage.removeItem('userRole');
+      localStorage.removeItem('userDepartment');
+      localStorage.removeItem('userId');
+      window.location.href = '/admin/login';
+    }
+
+    // ── ROLES & RBAC MANAGER ───────────────────────────────────
+    const scopeLabels = {
+      all: 'All Data (Global)',
+      department: 'Same Department Only',
+      assigned_students: 'Assigned Students Only',
+      own: 'Own Info & Attendance Only',
+    };
+
+    async function loadRoles() {
+      try {
+        const data = await api('GET', '/roles');
+        if (!data?.success) return;
+        allRoles = data.roles || [];
+        menuCatalog = data.menuCatalog || [];
+        permissionCatalog = data.permissionCatalog || [];
+        renderRolesGrid();
+      } catch (e) {
+        showToast('error', 'Failed to load roles.');
+      }
+    }
+
+    function renderRolesGrid() {
+      const grid = document.getElementById('roles-grid');
+      if (!allRoles.length) {
+        grid.innerHTML = '<div class="col-span-2 bg-white rounded-2xl p-8 text-center text-gray-400">No roles found.</div>';
+        return;
+      }
+      grid.innerHTML = allRoles.map(r => {
+        const menuPills = (r.menus || []).map(m => {
+          const item = menuCatalog.find(mc => mc.key === m);
+          return `<span class="px-2 py-0.5 bg-blue-50 text-blue-700 rounded-md text-xs font-medium">${esc(item ? item.label : m)}</span>`;
+        }).join('') || '<span class="text-xs text-gray-400">No sidebar menus</span>';
+
+        return `
+          <div class="bg-white rounded-2xl border border-gray-200 shadow-sm p-6 flex flex-col justify-between gap-4">
+            <div>
+              <div class="flex items-start justify-between gap-3 mb-2">
+                <div>
+                  <div class="flex items-center gap-2">
+                    <h4 class="font-bold text-gray-900 text-base">${esc(r.label)}</h4>
+                    <span class="font-mono text-xs bg-gray-100 text-gray-600 px-2 py-0.5 rounded">${esc(r.name)}</span>
+                    ${r.isSystem ? '<span class="text-xs bg-purple-50 text-purple-700 px-2 py-0.5 rounded-full font-medium">System</span>' : ''}
+                  </div>
+                  <p class="text-xs text-gray-500 mt-1">${esc(r.description || 'No description')}</p>
+                </div>
+                <span class="text-xs font-semibold text-gray-600 bg-gray-100 px-2.5 py-1 rounded-full flex-shrink-0">${r.userCount ?? 0} user${r.userCount === 1 ? '' : 's'}</span>
+              </div>
+
+              <div class="mt-3 flex flex-wrap items-center gap-2 text-xs">
+                <span class="font-semibold text-gray-600">Scope:</span>
+                <span class="px-2 py-0.5 bg-amber-50 text-amber-800 rounded-md font-medium">${esc(scopeLabels[r.dataScope] || r.dataScope)}</span>
+                <span class="font-semibold text-gray-600 ml-2">Permissions:</span>
+                <span class="px-2 py-0.5 bg-green-50 text-green-700 rounded-md font-medium">${(r.permissions || []).length} enabled</span>
+              </div>
+
+              <div class="mt-3">
+                <p class="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1.5">Left Sidebar Menus</p>
+                <div class="flex flex-wrap gap-1.5">${menuPills}</div>
+              </div>
+            </div>
+
+            <div class="flex items-center gap-2 pt-3 border-t border-gray-100">
+              <button onclick='openRoleModal(${JSON.stringify(r)})' class="flex-1 px-3 py-2 bg-blue-50 text-blue-700 hover:bg-blue-100 rounded-xl text-xs font-semibold transition-colors">
+                Configure Menus &amp; Permissions
+              </button>
+              ${!r.isSystem ? `
+                <button onclick="deleteRole('${r.id}', '${esc(r.label)}')" class="px-3 py-2 bg-red-50 text-red-600 hover:bg-red-100 rounded-xl text-xs font-semibold transition-colors">
+                  Delete
+                </button>` : ''}
+            </div>
+          </div>
+        `;
+      }).join('');
+    }
+
+    function openRoleModal(role) {
+      document.getElementById('role-modal-error').classList.add('hidden');
+      const isEdit = !!role;
+      document.getElementById('role-modal-title').textContent = isEdit ? `Edit Role: ${role.label}` : 'Create New Role';
+      document.getElementById('role-id').value = role?.id || '';
+      const nameInput = document.getElementById('role-name');
+      nameInput.value = role?.name || '';
+      nameInput.disabled = isEdit;
+      document.getElementById('role-label').value = role?.label || '';
+      document.getElementById('role-description').value = role?.description || '';
+      document.getElementById('role-data-scope').value = role?.dataScope || 'department';
+
+      const selectedMenus = new Set(role?.menus || ['dashboard', 'my_profile']);
+      const selectedPerms = new Set(role?.permissions || ['view_own_profile']);
+
+      document.getElementById('role-menus-boxes').innerHTML = menuCatalog.map(m => `
+        <label class="flex items-start gap-2.5 p-2 rounded-lg hover:bg-white cursor-pointer transition">
+          <input type="checkbox" class="role-menu-cb mt-0.5 rounded text-blue-600" value="${esc(m.key)}" ${selectedMenus.has(m.key) ? 'checked' : ''} />
+          <div class="text-xs">
+            <p class="font-semibold text-gray-800">${esc(m.label)}</p>
+            <p class="text-gray-500">${esc(m.description)}</p>
+          </div>
+        </label>
+      `).join('');
+
+      document.getElementById('role-perms-boxes').innerHTML = permissionCatalog.map(p => `
+        <label class="flex items-start gap-2.5 p-2 rounded-lg hover:bg-white cursor-pointer transition">
+          <input type="checkbox" class="role-perm-cb mt-0.5 rounded text-blue-600" value="${esc(p.key)}" ${selectedPerms.has(p.key) ? 'checked' : ''} />
+          <div class="text-xs">
+            <p class="font-semibold text-gray-800">${esc(p.label)}</p>
+            <p class="text-gray-400">${esc(p.group)}</p>
+          </div>
+        </label>
+      `).join('');
+
+      document.getElementById('role-modal').classList.remove('hidden');
+    }
+
+    function closeRoleModal() {
+      document.getElementById('role-modal').classList.add('hidden');
+    }
+
+    function toggleAllRoleBoxes(cls, checked) {
+      document.querySelectorAll('.' + cls).forEach(cb => { cb.checked = checked; });
+    }
+
+    document.getElementById('role-form').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const errEl = document.getElementById('role-modal-error');
+      errEl.classList.add('hidden');
+
+      const id          = document.getElementById('role-id').value;
+      const name        = document.getElementById('role-name').value.trim();
+      const label       = document.getElementById('role-label').value.trim();
+      const description = document.getElementById('role-description').value.trim();
+      const dataScope   = document.getElementById('role-data-scope').value;
+      const menus       = Array.from(document.querySelectorAll('.role-menu-cb:checked')).map(c => c.value);
+      const permissions = Array.from(document.querySelectorAll('.role-perm-cb:checked')).map(c => c.value);
+
+      const btn = document.getElementById('role-submit-btn');
+      btn.disabled = true;
+      btn.textContent = 'Saving…';
+
+      try {
+        const body = { name, label, description, dataScope, menus, permissions };
+        const data = id ? await api('PUT', `/roles/${id}`, body) : await api('POST', '/roles', body);
+        if (!data?.success) {
+          errEl.textContent = data?.message || 'Failed to save role.';
+          errEl.classList.remove('hidden');
+          return;
+        }
+        showToast('success', id ? 'Role updated! Menus & permissions synced.' : 'Role created!');
+        closeRoleModal();
+        await loadRoles();
+        await loadFilters();
+        // Refresh current user's live menus/permissions if they edited their own role
+        const me = await api('GET', '/me');
+        if (me?.success && me.user) {
+          currentUser = me.user;
+          applyRoleUI();
+        }
+      } catch (err) {
+        errEl.textContent = 'Network error.';
+        errEl.classList.remove('hidden');
+      } finally {
+        btn.disabled = false;
+        btn.textContent = 'Save Role';
+      }
+    });
+
+    async function deleteRole(id, label) {
+      pendingDeleteFn = async () => {
+        const data = await api('DELETE', `/roles/${id}`);
+        if (data?.success) {
+          showToast('success', `Role "${label}" deleted.`);
+          await loadRoles();
+          await loadFilters();
+        } else {
+          showToast('error', data?.message || 'Delete failed.');
+        }
+      };
+      document.getElementById('confirm-message').textContent = `Delete role "${label}"? This cannot be undone.`;
+      document.getElementById('confirm-modal').classList.remove('hidden');
+    }
+
+    // ── MY PROFILE & MY ATTENDANCE (Student / Personal Views) ──
+    async function loadMyProfile() {
+      try {
+        const data = await api('GET', '/my/profile');
+        if (!data?.success || !data.profile) return;
+        const p = data.profile;
+        document.getElementById('profile-avatar').textContent = (p.name || 'U').charAt(0).toUpperCase();
+        document.getElementById('profile-name').textContent = p.name;
+        document.getElementById('profile-email').textContent = p.email;
+        document.getElementById('profile-role-badge').textContent = p.roleLabel || p.role;
+        document.getElementById('profile-today-badge').textContent = p.markedToday ? '✅ Present Today' : '⏳ Not Marked Today';
+        document.getElementById('profile-department').textContent = p.department || 'Not assigned';
+        document.getElementById('profile-created').textContent = formatDate(p.createdAt);
+        document.getElementById('profile-total-days').textContent = p._count?.attendance ?? 0;
+        document.getElementById('profile-today-status').textContent = p.markedToday
+          ? `Marked at ${formatTime(p.todayMarkedAt)}`
+          : 'Not marked yet today';
+        document.getElementById('page-subtitle').textContent = 'Your personal account information';
+
+        const teacherCard = document.getElementById('profile-teacher-card');
+        if (p.teacher) {
+          teacherCard.classList.remove('hidden');
+          document.getElementById('profile-teacher-name').textContent = p.teacher.name;
+          document.getElementById('profile-teacher-meta').textContent =
+            `${p.teacher.email}${p.teacher.department ? ' • ' + p.teacher.department : ''}`;
+        } else {
+          teacherCard.classList.add('hidden');
+        }
+      } catch (e) {
+        showToast('error', 'Failed to load profile.');
+      }
+    }
+
+    // ── DEPARTMENTS CRUD ───────────────────────────────────────
+    async function loadDepartments() {
+      try {
+        const data = await api('GET', '/departments');
+        if (!data?.success) return;
+        allDepartments = data.departments || [];
+        renderDepartmentsTable();
+      } catch (e) {
+        showToast('error', 'Failed to load departments.');
+      }
+    }
+
+    function renderDepartmentsTable() {
+      const tbody = document.getElementById('departments-table-body');
+      if (!allDepartments.length) {
+        tbody.innerHTML = '<tr><td colspan="7" class="text-center py-10 text-gray-400">No departments found. Click "Add Department" to create one.</td></tr>';
+        return;
+      }
+      tbody.innerHTML = allDepartments.map(d => `
+        <tr class="border-t border-gray-50">
+          <td class="px-5 py-3.5 text-sm font-semibold text-gray-900">${esc(d.name)}</td>
+          <td class="px-5 py-3.5 text-xs font-mono text-gray-600">${d.code ? `<span class="bg-gray-100 px-2 py-0.5 rounded">${esc(d.code)}</span>` : '—'}</td>
+          <td class="px-5 py-3.5 text-sm text-gray-500">${esc(d.description || '—')}</td>
+          <td class="px-5 py-3.5 text-sm text-amber-700 font-medium">${d.teacherCount ?? 0}</td>
+          <td class="px-5 py-3.5 text-sm text-blue-700 font-medium">${d.studentCount ?? 0}</td>
+          <td class="px-5 py-3.5 text-sm text-gray-500">${formatDate(d.createdAt)}</td>
+          <td class="px-5 py-3.5 flex items-center gap-2">
+            <button onclick='openDeptModal(${JSON.stringify(d)})' class="text-blue-400 hover:text-blue-600 transition-colors" title="Edit">
+              <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/></svg>
+            </button>
+            <button onclick="deleteDepartment('${d.id}', '${esc(d.name)}', ${d.totalUsers ?? 0})" class="text-red-400 hover:text-red-600 transition-colors" title="Delete">
+              <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
+            </button>
+          </td>
+        </tr>
+      `).join('');
+    }
+
+    function openDeptModal(dept) {
+      document.getElementById('dept-modal-error').classList.add('hidden');
+      const isEdit = !!dept;
+      document.getElementById('dept-modal-title').textContent = isEdit ? 'Edit Department' : 'Add Department';
+      document.getElementById('dept-id').value = dept?.id || '';
+      document.getElementById('dept-name').value = dept?.name || '';
+      document.getElementById('dept-code').value = dept?.code || '';
+      document.getElementById('dept-description').value = dept?.description || '';
+      document.getElementById('dept-submit-btn').textContent = isEdit ? 'Update Department' : 'Save Department';
+      document.getElementById('dept-modal').classList.remove('hidden');
+    }
+
+    function closeDeptModal() {
+      document.getElementById('dept-modal').classList.add('hidden');
+    }
+
+    document.getElementById('dept-form').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const errEl = document.getElementById('dept-modal-error');
+      errEl.classList.add('hidden');
+
+      const id          = document.getElementById('dept-id').value;
+      const name        = document.getElementById('dept-name').value.trim();
+      const code        = document.getElementById('dept-code').value.trim();
+      const description = document.getElementById('dept-description').value.trim();
+
+      const btn = document.getElementById('dept-submit-btn');
+      btn.disabled = true;
+      btn.textContent = 'Saving…';
+
+      try {
+        const body = { name, code: code || null, description: description || null };
+        const data = id ? await api('PUT', `/departments/${id}`, body) : await api('POST', '/departments', body);
+        if (!data?.success) {
+          errEl.textContent = data?.message || 'Failed to save department.';
+          errEl.classList.remove('hidden');
+          return;
+        }
+        showToast('success', id ? 'Department updated.' : 'Department created.');
+        closeDeptModal();
+        await loadDepartments();
+        await loadFilters();
+      } catch (err) {
+        errEl.textContent = 'Network error.';
+        errEl.classList.remove('hidden');
+      } finally {
+        btn.disabled = false;
+        btn.textContent = id ? 'Update Department' : 'Save Department';
+      }
+    });
+
+    async function deleteDepartment(id, name, totalUsers) {
+      pendingDeleteFn = async () => {
+        const data = await api('DELETE', `/departments/${id}`);
+        if (data?.success) {
+          showToast('success', `Department "${name}" deleted.`);
+          await loadDepartments();
+          await loadFilters();
+        } else {
+          showToast('error', data?.message || 'Delete failed.');
+        }
+      };
+      const warn = totalUsers > 0
+        ? ` ${totalUsers} user(s) currently assigned to this department will become unassigned.`
+        : '';
+      document.getElementById('confirm-message').textContent = `Delete department "${name}"?${warn}`;
+      document.getElementById('confirm-modal').classList.remove('hidden');
+    }
+
+    // ── MY PROFILE & MY ATTENDANCE (Calendar View) ─────────────
+    function changeCalendarMonth(delta) {
+      const [yStr, mStr] = calendarMonth.split('-');
+      const d = new Date(parseInt(yStr, 10), parseInt(mStr, 10) - 1 + delta, 1);
+      calendarMonth = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+      loadMyAttendance();
+    }
+
+    function formatShortTime(ts) {
+      if (!ts) return '';
+      const d = new Date(ts);
+      return `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
+    }
+
+    function renderAttendanceCalendar(monthStr, todayStr, records) {
+      const [yStr, mStr] = monthStr.split('-');
+      const year = parseInt(yStr, 10);
+      const monthIdx = parseInt(mStr, 10) - 1;
+      const monthLabel = new Date(year, monthIdx, 1).toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
+
+      document.getElementById('calendar-month-label').textContent = monthLabel;
+      document.getElementById('my-month-pill').textContent = monthLabel;
+
+      const firstDow = new Date(year, monthIdx, 1).getDay(); // 0=Sun..6=Sat
+      const daysInMonth = new Date(year, monthIdx + 1, 0).getDate();
+      const prevMonthDays = new Date(year, monthIdx, 0).getDate();
+
+      const recordByDate = new Map(records.map(r => [r.date, r]));
+      const cells = [];
+
+      // Leading days from previous month
+      for (let i = firstDow - 1; i >= 0; i--) {
+        const dayNum = prevMonthDays - i;
+        const dow = (firstDow - 1 - i + 7) % 7;
+        const isWeekend = dow === 5 || dow === 6;
+        cells.push(`
+          <div class="min-h-[86px] rounded-xl border border-gray-100 bg-gray-50/40 p-2 opacity-45 flex flex-col justify-between">
+            <span class="text-xs font-medium text-gray-400">${dayNum}</span>
+            ${isWeekend ? '<div class="bg-slate-400 text-white text-[11px] font-medium rounded-md py-1 text-center">Weekend</div>' : '<div></div>'}
+          </div>
+        `);
+      }
+
+      // Current month days
+      for (let day = 1; day <= daysInMonth; day++) {
+        const dateStr = `${monthStr}-${String(day).padStart(2, '0')}`;
+        const dow = new Date(year, monthIdx, day).getDay();
+        const isWeekend = dow === 5 || dow === 6;
+        const isToday = dateStr === todayStr;
+        const rec = recordByDate.get(dateStr);
+
+        let bodyHtml = '';
+        if (rec) {
+          const timeText = formatShortTime(rec.markedAt);
+          if (rec.status === 'late_approved') {
+            bodyHtml = `
+              <div class="space-y-1">
+                <div class="bg-gradient-to-r from-lime-500 to-green-500 text-white text-[11px] font-semibold rounded-md py-1 px-1.5 text-center truncate shadow-sm">Late Approved</div>
+                <div class="text-[11px] font-medium text-lime-700 text-center">${timeText}</div>
+                <div class="w-1.5 h-1.5 rounded-full bg-green-500 mx-auto"></div>
+              </div>`;
+          } else if (rec.status === 'late') {
+            bodyHtml = `
+              <div class="space-y-1">
+                <div class="bg-gradient-to-r from-amber-500 to-orange-500 text-white text-[11px] font-semibold rounded-md py-1 px-1.5 text-center truncate shadow-sm">Late</div>
+                <div class="text-[11px] font-medium text-amber-700 text-center">${timeText}</div>
+                <div class="w-1.5 h-1.5 rounded-full bg-amber-500 mx-auto"></div>
+              </div>`;
+          } else {
+            bodyHtml = `
+              <div class="space-y-1">
+                <div class="bg-gradient-to-r from-emerald-500 to-green-500 text-white text-[11px] font-semibold rounded-md py-1 px-1.5 text-center truncate shadow-sm">Present</div>
+                <div class="text-[11px] font-medium text-emerald-700 text-center">${timeText}</div>
+              </div>`;
+          }
+        } else if (isWeekend) {
+          bodyHtml = `<div class="bg-slate-500 text-white text-[11px] font-medium rounded-md py-1 text-center">Weekend</div>`;
+        } else if (dateStr < todayStr) {
+          bodyHtml = `<div class="bg-rose-500 text-white text-[11px] font-medium rounded-md py-1 text-center">Absent</div>`;
+        }
+
+        const cellClass = isToday
+          ? 'min-h-[86px] rounded-xl border-2 border-blue-400 bg-blue-50/40 p-2 flex flex-col justify-between shadow-sm'
+          : 'min-h-[86px] rounded-xl border border-gray-200 bg-white p-2 flex flex-col justify-between hover:border-gray-300 transition-colors';
+        const dayTextClass = isToday ? 'text-xs font-bold text-blue-600' : 'text-xs font-semibold text-gray-800';
+
+        cells.push(`
+          <div class="${cellClass}">
+            <span class="${dayTextClass}">${day}</span>
+            <div class="mt-1">${bodyHtml}</div>
+          </div>
+        `);
+      }
+
+      // Trailing days from next month to complete the grid row
+      const totalCells = cells.length;
+      const remainder = totalCells % 7;
+      if (remainder !== 0) {
+        const trailing = 7 - remainder;
+        for (let t = 1; t <= trailing; t++) {
+          const dow = (totalCells + t - 1) % 7;
+          const isWeekend = dow === 5 || dow === 6;
+          cells.push(`
+            <div class="min-h-[86px] rounded-xl border border-gray-100 bg-gray-50/40 p-2 opacity-45 flex flex-col justify-between">
+              <span class="text-xs font-medium text-gray-400">${t}</span>
+              ${isWeekend ? '<div class="bg-slate-400 text-white text-[11px] font-medium rounded-md py-1 text-center">Weekend</div>' : '<div></div>'}
+            </div>
+          `);
+        }
+      }
+
+      document.getElementById('attendance-calendar-grid').innerHTML = cells.join('');
+    }
+
+    async function loadMyAttendance() {
+      try {
+        const data = await api('GET', `/my/attendance?month=${calendarMonth}`);
+        if (!data?.success) return;
+
+        const sum = data.summary || { presentDays: 0, lateDays: 0, absentDays: 0, totalDays: 0 };
+        document.getElementById('my-stat-present').textContent = sum.presentDays ?? 0;
+        document.getElementById('my-stat-late').textContent = sum.lateDays ?? 0;
+        document.getElementById('my-stat-absent').textContent = sum.absentDays ?? 0;
+        document.getElementById('my-stat-total-days').textContent = sum.totalDays ?? 0;
+
+        document.getElementById('my-last-network').textContent =
+          data.lastIpAddress ? `Last IP: ${data.lastIpAddress} • MAC: ${data.lastMacAddress || 'N/A'}` : '';
+        document.getElementById('page-subtitle').textContent = 'View your attendance calendar and network logs';
+
+        const records = data.records || [];
+        renderAttendanceCalendar(data.month || calendarMonth, data.today || new Date().toISOString().split('T')[0], records);
+
+        const tbody = document.getElementById('my-attendance-table-body');
+        if (!records.length) {
+          tbody.innerHTML = '<tr><td colspan="6" class="text-center py-10 text-gray-400">No attendance records for this month.</td></tr>';
+          return;
+        }
+        tbody.innerHTML = [...records].reverse().map(r => `
+          <tr class="border-t border-gray-50">
+            <td class="px-5 py-3.5 text-sm font-medium text-gray-900">${esc(r.date)}</td>
+            <td class="px-5 py-3.5 text-sm text-gray-500 whitespace-nowrap">${formatTime(r.markedAt)}</td>
+            <td class="px-5 py-3.5">${statusPill(r.status)}</td>
+            <td class="px-5 py-3.5 text-sm text-gray-500 font-mono">${esc(r.ipAddress || '—')}</td>
+            <td class="px-5 py-3.5 text-sm text-gray-500 font-mono">${esc(r.macAddress || '—')}</td>
+            <td class="px-5 py-3.5">${flagBadges(r)}</td>
+          </tr>
+        `).join('');
+      } catch (e) {
+        showToast('error', 'Failed to load your attendance.');
+      }
+    }
+
+    // ── Init ───────────────────────────────────────────────────
+    async function initDashboard() {
+      try {
+        const me = await api('GET', '/me');
+        if (me?.success && me.user) {
+          currentUser = me.user;
+          localStorage.setItem('adminName', me.user.name);
+          localStorage.setItem('userRole', me.user.role);
+          localStorage.setItem('userDepartment', me.user.department || '');
+          localStorage.setItem('userId', me.user.id);
+          if (me.user.dataScope === 'assigned_students') {
+            sectionTitles.users = 'My Students';
+          }
+        } else {
+          logout();
+          return;
+        }
+      } catch (e) {
+        console.error('Init user error:', e);
+      }
+      applyRoleUI();
+      await loadFilters();
+      const firstMenu = (currentUser.menus && currentUser.menus[0]) || 'my_profile';
+      showSection(firstMenu);
+    }
+
+    initDashboard();
+  </script>
+</body>
+</html>

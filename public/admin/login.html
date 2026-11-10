@@ -1,0 +1,175 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Portal Login — Attendance System</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet" />
+  <style>
+    body { font-family: 'Inter', sans-serif; }
+    .gradient-bg { background: linear-gradient(135deg, #1e3a5f 0%, #2d6a4f 100%); }
+    .card-shadow { box-shadow: 0 25px 50px -12px rgba(0,0,0,0.3); }
+    @keyframes fadeInUp {
+      from { opacity: 0; transform: translateY(30px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+    .fade-in { animation: fadeInUp 0.5s ease-out forwards; }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    .spinner { animation: spin 1s linear infinite; }
+  </style>
+</head>
+<body class="gradient-bg min-h-screen flex items-center justify-center p-4">
+
+  <!-- Decorative blobs -->
+  <div class="fixed inset-0 overflow-hidden pointer-events-none">
+    <div class="absolute -top-32 -right-32 w-72 h-72 bg-white opacity-5 rounded-full"></div>
+    <div class="absolute -bottom-32 -left-32 w-96 h-96 bg-white opacity-5 rounded-full"></div>
+  </div>
+
+  <div class="w-full max-w-sm fade-in">
+    <div class="bg-white rounded-3xl card-shadow overflow-hidden">
+
+      <!-- Header -->
+      <div class="gradient-bg p-8 text-white text-center">
+        <div class="w-16 h-16 bg-white bg-opacity-20 rounded-2xl flex items-center justify-center mx-auto mb-4">
+          <svg class="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+              d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
+          </svg>
+        </div>
+        <h1 class="text-2xl font-bold">Attendance Portal</h1>
+        <p class="text-green-200 text-sm mt-1">Role-Based Attendance Management</p>
+      </div>
+
+      <!-- Form -->
+      <div class="p-8">
+        <h2 class="text-xl font-semibold text-gray-800 mb-1">Welcome Back</h2>
+        <p class="text-gray-500 text-sm mb-6">Sign in with your account (Admin, Teacher, HR, or Student)</p>
+
+        <!-- Alert -->
+        <div id="alert" class="hidden bg-red-50 border border-red-200 text-red-700 rounded-xl p-3.5 mb-5 text-sm flex items-center gap-2">
+          <span>❌</span>
+          <span id="alert-msg"></span>
+        </div>
+
+        <form id="login-form" class="space-y-5">
+          <div>
+            <label class="block text-sm font-medium text-gray-700 mb-2">Email Address</label>
+            <div class="relative">
+              <span class="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                    d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+                </svg>
+              </span>
+              <input
+                type="email"
+                id="email"
+                autocomplete="email"
+                placeholder="admin@admin.com"
+                required
+                class="w-full pl-11 pr-4 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-green-500 focus:border-transparent outline-none transition text-gray-800 bg-gray-50"
+              />
+            </div>
+          </div>
+
+          <div>
+            <label class="block text-sm font-medium text-gray-700 mb-2">Password</label>
+            <div class="relative">
+              <span class="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                    d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+                </svg>
+              </span>
+              <input
+                type="password"
+                id="password"
+                autocomplete="current-password"
+                placeholder="Enter admin password"
+                required
+                class="w-full pl-11 pr-4 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-green-500 focus:border-transparent outline-none transition text-gray-800 bg-gray-50"
+              />
+            </div>
+          </div>
+
+          <button
+            type="submit"
+            id="submit-btn"
+            class="w-full gradient-bg text-white py-3.5 rounded-xl font-semibold hover:opacity-90 active:scale-95 transition-all duration-200 flex items-center justify-center gap-2 shadow-lg"
+          >
+            <span id="btn-text">Sign In</span>
+            <div id="btn-spinner" class="hidden w-5 h-5 border-2 border-white border-t-transparent rounded-full spinner"></div>
+          </button>
+        </form>
+
+        <p class="text-center text-xs text-gray-400 mt-6">
+          Role-based access — menus &amp; permissions are managed by Admin
+        </p>
+      </div>
+    </div>
+
+    <p class="text-center text-white text-opacity-60 text-xs mt-6">
+      Attendance System &copy; 2024
+    </p>
+  </div>
+
+  <script>
+    // Redirect if already logged in
+    if (localStorage.getItem('adminToken')) {
+      window.location.href = '/admin/dashboard';
+    }
+
+    const form      = document.getElementById('login-form');
+    const alertEl   = document.getElementById('alert');
+    const alertMsg  = document.getElementById('alert-msg');
+    const submitBtn = document.getElementById('submit-btn');
+    const btnText   = document.getElementById('btn-text');
+    const btnSpinner = document.getElementById('btn-spinner');
+
+    function showError(msg) {
+      alertMsg.textContent = msg;
+      alertEl.classList.remove('hidden');
+    }
+
+    form.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      alertEl.classList.add('hidden');
+
+      const email    = document.getElementById('email').value.trim();
+      const password = document.getElementById('password').value;
+
+      submitBtn.disabled = true;
+      btnText.textContent = 'Signing in…';
+      btnSpinner.classList.remove('hidden');
+
+      try {
+        const res  = await fetch('/api/admin/login', {
+          method:  'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body:    JSON.stringify({ email, password }),
+        });
+        const data = await res.json();
+
+        if (data.success && data.token) {
+          localStorage.setItem('adminToken', data.token);
+          localStorage.setItem('adminName', data.name || 'Admin');
+          localStorage.setItem('userRole', data.role || 'admin');
+          localStorage.setItem('userDepartment', data.department || '');
+          localStorage.setItem('userId', data.id || '');
+          window.location.href = '/admin/dashboard';
+        } else {
+          showError(data.message || 'Login failed. Please check your credentials.');
+        }
+      } catch (err) {
+        showError('Network error. Please check your connection and try again.');
+      } finally {
+        submitBtn.disabled = false;
+        btnText.textContent = 'Sign In';
+        btnSpinner.classList.add('hidden');
+      }
+    });
+  </script>
+</body>
+</html>

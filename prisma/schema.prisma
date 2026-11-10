@@ -1,0 +1,75 @@
+datasource db {
+  provider = "mongodb"
+  url      = env("DATABASE_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+model Role {
+  id          String   @id @default(auto()) @map("_id") @db.ObjectId
+  name        String   @unique
+  label       String
+  description String?
+  isSystem    Boolean  @default(false)
+  dataScope   String   @default("own") // "all" | "department" | "assigned_students" | "own"
+  menus       String[]
+  permissions String[]
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+model Department {
+  id          String   @id @default(auto()) @map("_id") @db.ObjectId
+  name        String   @unique
+  code        String?
+  description String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+model User {
+  id           String           @id @default(auto()) @map("_id") @db.ObjectId
+  name         String
+  email        String           @unique
+  password     String
+  role         String           @default("student")
+  department   String?
+  teacherId    String?          @db.ObjectId
+  teacher      User?            @relation("TeacherStudents", fields: [teacherId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  students     User[]           @relation("TeacherStudents")
+  createdAt    DateTime         @default(now())
+  updatedAt    DateTime         @updatedAt
+  attendance   Attendance[]
+  linksCreated AttendanceLink[] @relation("LinkCreator")
+}
+
+model AttendanceLink {
+  id              String    @id @default(auto()) @map("_id") @db.ObjectId
+  token           String    @unique
+  date            String
+  isActive        Boolean   @default(true)
+  durationMinutes Int?
+  expiresAt       DateTime?
+  lateAfter       String?   // Optional HH:mm cutoff e.g. "09:30"
+  teacherId       String?   @db.ObjectId
+  createdById     String?   @db.ObjectId
+  createdBy       User?     @relation("LinkCreator", fields: [createdById], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  createdAt       DateTime  @default(now())
+}
+
+model Attendance {
+  id         String   @id @default(auto()) @map("_id") @db.ObjectId
+  userId     String   @db.ObjectId
+  user       User     @relation(fields: [userId], references: [id])
+  date       String
+  status     String   @default("present") // "present" | "late" | "late_approved"
+  markedAt   DateTime @default(now())
+  ipAddress  String?
+  macAddress String?
+  userAgent  String?
+  linkToken  String?
+  ipChanged  Boolean  @default(false)
+  macChanged Boolean  @default(false)
+}

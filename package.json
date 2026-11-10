@@ -1,0 +1,37 @@
+{
+  "name": "attendance-system",
+  "version": "1.0.0",
+  "description": "Daily attendance system with magic links, IP/MAC tracking, and admin panel",
+  "main": "dist/index.js",
+  "scripts": {
+    "dev": "nodemon",
+    "build": "tsc",
+    "start": "node dist/index.js",
+    "db:push": "npx prisma db push",
+    "seed": "ts-node src/seed.ts"
+  },
+  "dependencies": {
+    "@network-utils/arp-lookup": "^2.1.0",
+    "@prisma/client": "^5.10.2",
+    "bcryptjs": "^2.4.3",
+    "cors": "^2.8.5",
+    "dotenv": "^16.4.5",
+    "express": "^4.18.3",
+    "jsonwebtoken": "^9.0.2",
+    "prisma": "^5.10.2"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  },
+  "devDependencies": {
+    "@types/bcryptjs": "^2.4.6",
+    "@types/cors": "^2.8.19",
+    "@types/express": "^5.0.6",
+    "@types/jsonwebtoken": "^9.0.10",
+    "@types/node": "^26.6.6",
+    "nodemon": "^3.1.14",
+    "ts-node": "^10.9.2",
+    "tsconfig-paths": "^4.2.0",
+    "typescript": "^5.9.3"
+  }
+}
