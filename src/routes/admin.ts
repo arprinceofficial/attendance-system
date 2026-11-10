@@ -52,92 +52,105 @@ function requireAnyPermission(permissions: string[]) {
   };
 }
 
-async function getScopedStudentIds(
+async function getScopedTargetUsers(
   panelUser: JwtPanelPayload,
   department?: string,
-  teacherId?: string
-): Promise<string[]> {
+  teacherId?: string,
+  roleFilter?: string
+): Promise<Array<{ id: string; role: string }>> {
   const scope = panelUser.role === 'admin' ? 'all' : (panelUser.dataScope || 'own');
 
   if (scope === 'own') {
-    return [panelUser.id];
+    return [{ id: panelUser.id, role: panelUser.role }];
   }
 
   if (scope === 'assigned_students') {
-    const students = await prisma.user.findMany({
-      where: { role: 'student', teacherId: panelUser.id },
-      select: { id: true },
+    return prisma.user.findMany({
+      where: { teacherId: panelUser.id },
+      select: { id: true, role: true },
     });
-    return students.map((s) => s.id);
   }
+
+  const supervisorRoleDocs = await prisma.role.findMany({
+    where: { dataScope: 'assigned_students' },
+    select: { name: true },
+  });
+  const supervisorRoles = supervisorRoleDocs.map((r) => r.name);
 
   if (scope === 'department') {
     const dept = panelUser.department?.trim();
     if (!dept) return [];
 
-    const deptTeachers = await prisma.user.findMany({
-      where: { role: 'teacher', department: dept },
-      select: { id: true },
-    });
-    const deptTeacherIds = deptTeachers.map((t) => t.id);
+    const deptSupervisors = supervisorRoles.length > 0
+      ? await prisma.user.findMany({
+          where: { role: { in: supervisorRoles }, department: dept },
+          select: { id: true },
+        })
+      : [];
+    const deptSupervisorIds = deptSupervisors.map((t) => t.id);
 
     const andConditions: Record<string, unknown>[] = [
-      { role: 'student' },
+      roleFilter ? { role: roleFilter } : { role: { not: 'admin' } },
       {
         OR: [
           { department: dept },
-          ...(deptTeacherIds.length > 0 ? [{ teacherId: { in: deptTeacherIds } }] : []),
+          ...(deptSupervisorIds.length > 0 ? [{ teacherId: { in: deptSupervisorIds } }] : []),
         ],
       },
     ];
 
     if (teacherId) {
-      andConditions.push({ teacherId });
+      andConditions.push({ OR: [{ teacherId }, { id: teacherId }] });
     }
 
-    const students = await prisma.user.findMany({
+    return prisma.user.findMany({
       where: { AND: andConditions },
-      select: { id: true },
+      select: { id: true, role: true },
     });
-    return students.map((s) => s.id);
   }
 
   // scope === 'all'
   const canFilter = panelUser.role === 'admin' || panelUser.permissions?.includes('filter_department');
-  const andConditions: Record<string, unknown>[] = [{ role: 'student' }];
+  const andConditions: Record<string, unknown>[] = [
+    roleFilter ? { role: roleFilter } : { role: { not: 'admin' } },
+  ];
 
   if (canFilter && teacherId) {
-    andConditions.push({ teacherId });
+    andConditions.push({ OR: [{ teacherId }, { id: teacherId }] });
   }
 
   if (canFilter && department) {
-    const deptTeachers = await prisma.user.findMany({
-      where: { role: 'teacher', department },
-      select: { id: true },
-    });
-    const deptTeacherIds = deptTeachers.map((t) => t.id);
+    const deptSupervisors = supervisorRoles.length > 0
+      ? await prisma.user.findMany({
+          where: { role: { in: supervisorRoles }, department },
+          select: { id: true },
+        })
+      : [];
+    const deptSupervisorIds = deptSupervisors.map((t) => t.id);
 
     andConditions.push({
       OR: [
         { department },
-        ...(deptTeacherIds.length > 0 ? [{ teacherId: { in: deptTeacherIds } }] : []),
+        ...(deptSupervisorIds.length > 0 ? [{ teacherId: { in: deptSupervisorIds } }] : []),
       ],
     });
   }
 
-  const students = await prisma.user.findMany({
+  return prisma.user.findMany({
     where: { AND: andConditions },
-    select: { id: true },
+    select: { id: true, role: true },
   });
-  return students.map((s) => s.id);
 }
 
 async function canAccessStudent(panelUser: JwtPanelPayload, targetUser: { id: string; role: string; department: string | null; teacherId: string | null }): Promise<boolean> {
+  if (panelUser.role !== 'admin' && targetUser.role === 'admin') {
+    return false;
+  }
   const scope = panelUser.role === 'admin' ? 'all' : (panelUser.dataScope || 'own');
   if (scope === 'all') return true;
   if (scope === 'own') return targetUser.id === panelUser.id;
   if (scope === 'assigned_students') {
-    return targetUser.role === 'student' && targetUser.teacherId === panelUser.id;
+    return targetUser.teacherId === panelUser.id;
   }
   if (scope === 'department') {
     if (!panelUser.department) return false;
@@ -225,7 +238,7 @@ router.get('/me', async (req: Request, res: Response): Promise<void> => {
         role: true,
         department: true,
         teacherId: true,
-        teacher: { select: { id: true, name: true, email: true, department: true } },
+        teacher: { select: { id: true, name: true, email: true, department: true, role: true } },
         createdAt: true,
       },
     });
@@ -269,7 +282,7 @@ router.get('/my/profile', requirePermission('view_own_profile'), async (req: Req
         role: true,
         department: true,
         teacherId: true,
-        teacher: { select: { id: true, name: true, email: true, department: true } },
+        teacher: { select: { id: true, name: true, email: true, department: true, role: true } },
         _count: { select: { students: true, attendance: true } },
         createdAt: true,
       },
@@ -408,17 +421,17 @@ router.get(
           role: true,
           department: true,
           teacherId: true,
-          teacher: { select: { id: true, name: true, email: true, department: true } },
+          teacher: { select: { id: true, name: true, email: true, department: true, role: true } },
         },
       });
 
       if (!student) {
-        res.status(404).json({ success: false, message: 'Student not found.' });
+        res.status(404).json({ success: false, message: 'User not found.' });
         return;
       }
 
       if (!(await canAccessStudent(panelUser, student))) {
-        res.status(403).json({ success: false, message: 'You cannot view attendance for students outside your scope.' });
+        res.status(403).json({ success: false, message: 'You cannot view attendance for users outside your scope.' });
         return;
       }
 
@@ -440,19 +453,25 @@ router.get('/filters', async (req: Request, res: Response): Promise<void> => {
     const panelUser = req.admin!;
     await ensureDefaultRoles();
 
-    const roles = await prisma.role.findMany({
+    const allRoles = await prisma.role.findMany({
       select: { name: true, label: true, dataScope: true },
       orderBy: { createdAt: 'asc' },
     });
+    const roles = panelUser.role === 'admin'
+      ? allRoles
+      : allRoles.filter((r) => r.name !== 'admin');
 
     const scope = panelUser.role === 'admin' ? 'all' : (panelUser.dataScope || 'own');
+    const supervisorRoles = allRoles
+      .filter((r) => r.dataScope === 'assigned_students')
+      .map((r) => r.name);
 
     if (scope === 'assigned_students' || scope === 'own') {
       res.json({
         success: true,
         departments: panelUser.department ? [panelUser.department] : [],
-        teachers: panelUser.role === 'teacher'
-          ? [{ id: panelUser.id, name: panelUser.name, email: panelUser.email, department: panelUser.department ?? null }]
+        teachers: supervisorRoles.includes(panelUser.role)
+          ? [{ id: panelUser.id, name: panelUser.name, email: panelUser.email, department: panelUser.department ?? null, role: panelUser.role }]
           : [],
         roles,
       });
@@ -460,11 +479,13 @@ router.get('/filters', async (req: Request, res: Response): Promise<void> => {
     }
 
     if (scope === 'department') {
-      const teachers = await prisma.user.findMany({
-        where: { role: 'teacher', department: panelUser.department ?? undefined },
-        select: { id: true, name: true, email: true, department: true },
-        orderBy: { name: 'asc' },
-      });
+      const teachers = supervisorRoles.length > 0
+        ? await prisma.user.findMany({
+            where: { role: { in: supervisorRoles }, department: panelUser.department ?? undefined },
+            select: { id: true, name: true, email: true, department: true, role: true },
+            orderBy: { name: 'asc' },
+          })
+        : [];
       res.json({
         success: true,
         departments: panelUser.department ? [panelUser.department] : [],
@@ -474,11 +495,13 @@ router.get('/filters', async (req: Request, res: Response): Promise<void> => {
       return;
     }
 
-    const teachers = await prisma.user.findMany({
-      where: { role: 'teacher' },
-      select: { id: true, name: true, email: true, department: true },
-      orderBy: { name: 'asc' },
-    });
+    const teachers = supervisorRoles.length > 0
+      ? await prisma.user.findMany({
+          where: { role: { in: supervisorRoles } },
+          select: { id: true, name: true, email: true, department: true, role: true },
+          orderBy: { name: 'asc' },
+        })
+      : [];
 
     const managedDepts = await prisma.department.findMany({
       select: { name: true },
@@ -519,33 +542,43 @@ router.get('/filters', async (req: Request, res: Response): Promise<void> => {
 // GET /api/admin/departments
 router.get('/departments', requirePermission('manage_departments'), async (_req: Request, res: Response): Promise<void> => {
   try {
-    const departments = await prisma.department.findMany({
-      orderBy: { name: 'asc' },
-    });
+    await ensureDefaultRoles();
+    const [departments, users, allRoles] = await Promise.all([
+      prisma.department.findMany({ orderBy: { name: 'asc' } }),
+      prisma.user.findMany({
+        where: { department: { not: null }, role: { not: 'admin' } },
+        select: { department: true, role: true },
+      }),
+      prisma.role.findMany({
+        where: { name: { not: 'admin' } },
+        select: { name: true, label: true },
+        orderBy: { createdAt: 'asc' },
+      }),
+    ]);
 
-    const users = await prisma.user.findMany({
-      where: { department: { not: null } },
-      select: { department: true, role: true },
-    });
-
-    const counts: Record<string, { teachers: number; students: number; total: number }> = {};
+    const deptRoleCounts: Record<string, Record<string, number>> = {};
+    const deptTotals: Record<string, number> = {};
     for (const u of users) {
       const dept = u.department?.trim();
       if (!dept) continue;
-      if (!counts[dept]) counts[dept] = { teachers: 0, students: 0, total: 0 };
-      counts[dept].total++;
-      if (u.role === 'teacher') counts[dept].teachers++;
-      if (u.role === 'student') counts[dept].students++;
+      if (!deptRoleCounts[dept]) deptRoleCounts[dept] = {};
+      deptRoleCounts[dept][u.role] = (deptRoleCounts[dept][u.role] || 0) + 1;
+      deptTotals[dept] = (deptTotals[dept] || 0) + 1;
     }
 
     res.json({
       success: true,
-      departments: departments.map((d) => ({
-        ...d,
-        teacherCount: counts[d.name]?.teachers || 0,
-        studentCount: counts[d.name]?.students || 0,
-        totalUsers: counts[d.name]?.total || 0,
-      })),
+      departments: departments.map((d) => {
+        const byRole = deptRoleCounts[d.name] || {};
+        const roleBreakdown = allRoles
+          .map((r) => ({ role: r.name, label: r.label, count: byRole[r.name] || 0 }))
+          .filter((rc) => rc.count > 0);
+        return {
+          ...d,
+          roleBreakdown,
+          totalUsers: deptTotals[d.name] || 0,
+        };
+      }),
     });
   } catch (err) {
     console.error('Get departments error:', err);
@@ -818,12 +851,13 @@ router.delete('/roles/:id', requirePermission('manage_roles'), async (req: Reque
 router.get('/stats', requirePermission('view_dashboard'), async (req: Request, res: Response): Promise<void> => {
   try {
     const today = getTodayDate();
-    const studentIds = await getScopedStudentIds(req.admin!);
-    const totalUsers = studentIds.length;
+    const targetUsers = await getScopedTargetUsers(req.admin!);
+    const userIds = targetUsers.map((u) => u.id);
+    const totalUsers = userIds.length;
     const todayPresent =
       totalUsers > 0
         ? await prisma.attendance.count({
-            where: { date: today, userId: { in: studentIds } },
+            where: { date: today, userId: { in: userIds } },
           })
         : 0;
 
@@ -844,6 +878,25 @@ router.get('/stats', requirePermission('view_dashboard'), async (req: Request, r
 // ─────────────────────────────────────────
 
 // GET /api/admin/attendance/today
+async function buildRoleBreakdown(
+  targetUsers: Array<{ id: string; role: string }>,
+  records: Array<{ user?: { role: string } | null }>
+) {
+  const roles = await prisma.role.findMany({
+    where: { name: { not: 'admin' } },
+    select: { name: true, label: true },
+    orderBy: { createdAt: 'asc' },
+  });
+  return roles
+    .map((r) => ({
+      role: r.name,
+      label: r.label,
+      total: targetUsers.filter((u) => u.role === r.name).length,
+      present: records.filter((rec) => rec.user?.role === r.name).length,
+    }))
+    .filter((item) => item.total > 0 || item.present > 0);
+}
+
 router.get(
   '/attendance/today',
   requireAnyPermission(['view_dashboard', 'view_attendance']),
@@ -858,13 +911,18 @@ router.get(
         typeof req.query.teacherId === 'string' && req.query.teacherId.trim()
           ? req.query.teacherId.trim()
           : undefined;
+      const roleFilter =
+        typeof req.query.role === 'string' && req.query.role.trim()
+          ? req.query.role.trim()
+          : undefined;
 
-      const studentIds = await getScopedStudentIds(req.admin!, department, teacherId);
+      const targetUsers = await getScopedTargetUsers(req.admin!, department, teacherId, roleFilter);
+      const userIds = targetUsers.map((u) => u.id);
 
       const records =
-        studentIds.length > 0
+        userIds.length > 0
           ? await prisma.attendance.findMany({
-              where: { date: today, userId: { in: studentIds } },
+              where: { date: today, userId: { in: userIds } },
               include: {
                 user: {
                   select: {
@@ -874,7 +932,7 @@ router.get(
                     role: true,
                     department: true,
                     teacherId: true,
-                    teacher: { select: { id: true, name: true, department: true } },
+                    teacher: { select: { id: true, name: true, department: true, role: true } },
                   },
                 },
               },
@@ -882,12 +940,15 @@ router.get(
             })
           : [];
 
+      const roleBreakdown = await buildRoleBreakdown(targetUsers, records);
+
       res.json({
         success: true,
         date: today,
         present: records.length,
-        total: studentIds.length,
-        absent: Math.max(0, studentIds.length - records.length),
+        total: userIds.length,
+        absent: Math.max(0, userIds.length - records.length),
+        roleBreakdown,
         records,
       });
     } catch (err) {
@@ -909,18 +970,23 @@ router.get('/attendance', requirePermission('view_attendance'), async (req: Requ
       typeof req.query.teacherId === 'string' && req.query.teacherId.trim()
         ? req.query.teacherId.trim()
         : undefined;
+    const roleFilter =
+      typeof req.query.role === 'string' && req.query.role.trim()
+        ? req.query.role.trim()
+        : undefined;
 
     if (!date || !/^\d{4}-\d{2}-\d{2}$/.test(date)) {
       res.status(400).json({ success: false, message: 'Valid date query parameter (YYYY-MM-DD) required.' });
       return;
     }
 
-    const studentIds = await getScopedStudentIds(req.admin!, department, teacherId);
+    const targetUsers = await getScopedTargetUsers(req.admin!, department, teacherId, roleFilter);
+    const userIds = targetUsers.map((u) => u.id);
 
     const records =
-      studentIds.length > 0
+      userIds.length > 0
         ? await prisma.attendance.findMany({
-            where: { date, userId: { in: studentIds } },
+            where: { date, userId: { in: userIds } },
             include: {
               user: {
                 select: {
@@ -930,7 +996,7 @@ router.get('/attendance', requirePermission('view_attendance'), async (req: Requ
                   role: true,
                   department: true,
                   teacherId: true,
-                  teacher: { select: { id: true, name: true, department: true } },
+                  teacher: { select: { id: true, name: true, department: true, role: true } },
                 },
               },
             },
@@ -938,12 +1004,15 @@ router.get('/attendance', requirePermission('view_attendance'), async (req: Requ
           })
         : [];
 
+    const roleBreakdown = await buildRoleBreakdown(targetUsers, records);
+
     res.json({
       success: true,
       date,
       present: records.length,
-      total: studentIds.length,
-      absent: Math.max(0, studentIds.length - records.length),
+      total: userIds.length,
+      absent: Math.max(0, userIds.length - records.length),
+      roleBreakdown,
       records,
     });
   } catch (err) {
@@ -1001,7 +1070,7 @@ router.post('/attendance', requirePermission('manage_attendance'), async (req: R
             name: true,
             email: true,
             department: true,
-            teacher: { select: { id: true, name: true, department: true } },
+            teacher: { select: { id: true, name: true, department: true, role: true } },
           },
         },
       },
@@ -1124,14 +1193,21 @@ router.get('/users', requirePermission('view_users'), async (req: Request, res: 
     if (scope === 'own') {
       where.id = panelUser.id;
     } else if (scope === 'assigned_students') {
-      where.role = 'student';
       where.teacherId = panelUser.id;
     } else if (scope === 'department') {
       where.department = panelUser.department || '__none__';
-      if (roleFilter) where.role = roleFilter;
+      where.role = roleFilter
+        ? (panelUser.role !== 'admin' && roleFilter === 'admin' ? '__forbidden__' : roleFilter)
+        : (panelUser.role === 'admin' ? undefined : { not: 'admin' });
       if (teacherFilter) where.teacherId = teacherFilter;
     } else {
-      if (roleFilter) where.role = roleFilter;
+      if (panelUser.role !== 'admin') {
+        where.role = roleFilter
+          ? (roleFilter === 'admin' ? '__forbidden__' : roleFilter)
+          : { not: 'admin' };
+      } else if (roleFilter) {
+        where.role = roleFilter;
+      }
       if (deptFilter) where.department = deptFilter;
       if (teacherFilter) where.teacherId = teacherFilter;
     }
@@ -1145,7 +1221,7 @@ router.get('/users', requirePermission('view_users'), async (req: Request, res: 
         role: true,
         department: true,
         teacherId: true,
-        teacher: { select: { id: true, name: true, department: true } },
+        teacher: { select: { id: true, name: true, department: true, role: true } },
         _count: { select: { students: true } },
         createdAt: true,
         updatedAt: true,
@@ -1185,7 +1261,8 @@ router.post('/users', requirePermission('create_users'), async (req: Request<Rec
     let resolvedTeacherId: string | null = teacherId?.trim() || null;
 
     if (scope === 'assigned_students') {
-      resolvedRole = 'student';
+      const ownRole = await prisma.role.findFirst({ where: { dataScope: 'own' }, orderBy: { createdAt: 'asc' } });
+      resolvedRole = ownRole?.name || 'student';
       resolvedTeacherId = panelUser.id;
       resolvedDept = resolvedDept || panelUser.department || null;
     } else if (scope === 'department') {
@@ -1199,22 +1276,30 @@ router.post('/users', requirePermission('create_users'), async (req: Request<Rec
       return;
     }
 
+    if (panelUser.role !== 'admin' && resolvedRole === 'admin') {
+      res.status(403).json({ success: false, message: 'You cannot create Super Admin users.' });
+      return;
+    }
+
     const roleExists = await prisma.role.findUnique({ where: { name: resolvedRole } });
     if (!roleExists) {
       res.status(400).json({ success: false, message: `Role "${resolvedRole}" does not exist.` });
       return;
     }
 
-    if (resolvedRole === 'student' && resolvedTeacherId) {
-      const assignedTeacher = await prisma.user.findUnique({ where: { id: resolvedTeacherId } });
-      if (!assignedTeacher || assignedTeacher.role !== 'teacher') {
-        res.status(400).json({ success: false, message: 'Assigned teacher not found.' });
+    if (roleExists.dataScope === 'own' && resolvedTeacherId) {
+      const assignedSupervisor = await prisma.user.findUnique({ where: { id: resolvedTeacherId } });
+      const supRole = assignedSupervisor
+        ? await prisma.role.findUnique({ where: { name: assignedSupervisor.role } })
+        : null;
+      if (!assignedSupervisor || supRole?.dataScope !== 'assigned_students') {
+        res.status(400).json({ success: false, message: 'Assigned supervisor not found.' });
         return;
       }
-      if (!resolvedDept && assignedTeacher.department) {
-        resolvedDept = assignedTeacher.department;
+      if (!resolvedDept && assignedSupervisor.department) {
+        resolvedDept = assignedSupervisor.department;
       }
-    } else if (resolvedRole !== 'student') {
+    } else if (roleExists.dataScope !== 'own') {
       resolvedTeacherId = null;
     }
 
@@ -1236,7 +1321,7 @@ router.post('/users', requirePermission('create_users'), async (req: Request<Rec
         role: true,
         department: true,
         teacherId: true,
-        teacher: { select: { id: true, name: true, department: true } },
+        teacher: { select: { id: true, name: true, department: true, role: true } },
         createdAt: true,
       },
     });
@@ -1286,13 +1371,13 @@ router.put('/users/:id', requirePermission('edit_users'), async (req: Request, r
       }
     } else if (scope === 'all' || scope === 'department') {
       const nextRole = role?.trim() || target.role;
+      let nextRoleDoc = await prisma.role.findUnique({ where: { name: nextRole } });
       if (role) {
-        if (scope === 'department' && role === 'admin') {
-          res.status(403).json({ success: false, message: 'You cannot promote users to admin.' });
+        if (panelUser.role !== 'admin' && role.trim() === 'admin') {
+          res.status(403).json({ success: false, message: 'You cannot assign the Super Admin role.' });
           return;
         }
-        const roleExists = await prisma.role.findUnique({ where: { name: nextRole } });
-        if (!roleExists) {
+        if (!nextRoleDoc) {
           res.status(400).json({ success: false, message: `Role "${nextRole}" does not exist.` });
           return;
         }
@@ -1301,18 +1386,21 @@ router.put('/users/:id', requirePermission('edit_users'), async (req: Request, r
       if (department !== undefined && scope === 'all') {
         updateData.department = department?.trim() || null;
       }
-      if (nextRole !== 'student') {
+      if (nextRoleDoc?.dataScope !== 'own') {
         updateData.teacherId = null;
       } else if (teacherId !== undefined) {
         const nextTeacherId = teacherId?.trim() || null;
         if (nextTeacherId) {
-          const assignedTeacher = await prisma.user.findUnique({ where: { id: nextTeacherId } });
-          if (!assignedTeacher || assignedTeacher.role !== 'teacher') {
-            res.status(400).json({ success: false, message: 'Assigned teacher not found.' });
+          const assignedSupervisor = await prisma.user.findUnique({ where: { id: nextTeacherId } });
+          const supRole = assignedSupervisor
+            ? await prisma.role.findUnique({ where: { name: assignedSupervisor.role } })
+            : null;
+          if (!assignedSupervisor || supRole?.dataScope !== 'assigned_students') {
+            res.status(400).json({ success: false, message: 'Assigned supervisor not found.' });
             return;
           }
-          if (department === undefined && !target.department && assignedTeacher.department) {
-            updateData.department = assignedTeacher.department;
+          if (department === undefined && !target.department && assignedSupervisor.department) {
+            updateData.department = assignedSupervisor.department;
           }
         }
         updateData.teacherId = nextTeacherId;
@@ -1329,7 +1417,7 @@ router.put('/users/:id', requirePermission('edit_users'), async (req: Request, r
         role: true,
         department: true,
         teacherId: true,
-        teacher: { select: { id: true, name: true, department: true } },
+        teacher: { select: { id: true, name: true, department: true, role: true } },
         createdAt: true,
         updatedAt: true,
       },

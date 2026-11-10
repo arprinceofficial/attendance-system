@@ -7,6 +7,18 @@ async function seed(): Promise<void> {
   console.log('\n🌱 Seeding database...\n');
 
   await ensureDefaultRoles();
+  // Ensure HR role defaults include create_users & edit_users (without delete_users)
+  const hrDefault = await prisma.role.findUnique({ where: { name: 'hr' } });
+  if (hrDefault) {
+    const perms = new Set(hrDefault.permissions);
+    perms.add('create_users');
+    perms.add('edit_users');
+    perms.delete('delete_users');
+    await prisma.role.update({
+      where: { id: hrDefault.id },
+      data: { permissions: Array.from(perms) },
+    });
+  }
   console.log('✅ Default RBAC roles initialized: admin, teacher, hr, student');
 
   // Seed default departments
@@ -130,7 +142,7 @@ async function seed(): Promise<void> {
 
   console.log('\n───────────────────────────────────────────────');
   console.log('🚀 Seed complete! Start the server with: npm run dev');
-  console.log('🔑 Portal login: http://localhost:3000/admin/login');
+  console.log('🔑 Portal login: http://localhost:3000/');
   console.log('───────────────────────────────────────────────\n');
 }
 

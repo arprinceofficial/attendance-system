@@ -20,30 +20,20 @@ app.use('/attend', attendRoute);
 app.use('/api/auth', authRoute);
 app.use('/api/admin', adminRoute);
 
-// Admin HTML pages
-app.get('/admin/login', (_req: Request, res: Response) => {
+// Portal HTML pages (main entry at / and /dashboard)
+app.get('/', (_req: Request, res: Response) => {
   res.sendFile(path.join(__dirname, '..', 'public', 'admin', 'login.html'));
 });
 
-app.get('/admin/dashboard', (_req: Request, res: Response) => {
+app.get('/dashboard', (_req: Request, res: Response) => {
   res.sendFile(path.join(__dirname, '..', 'public', 'admin', 'dashboard.html'));
 });
 
-app.get('/admin', (_req: Request, res: Response) => {
-  res.redirect('/admin/login');
-});
-
-app.get('/login', (_req: Request, res: Response) => {
-  res.redirect('/admin/login');
-});
-
-app.get('/dashboard', (_req: Request, res: Response) => {
-  res.redirect('/admin/dashboard');
-});
-
-app.get('/', (_req: Request, res: Response) => {
-  res.redirect('/admin/login');
-});
+// Legacy aliases redirect cleanly to main routes
+app.get('/admin', (_req: Request, res: Response) => res.redirect('/'));
+app.get('/admin/login', (_req: Request, res: Response) => res.redirect('/'));
+app.get('/login', (_req: Request, res: Response) => res.redirect('/'));
+app.get('/admin/dashboard', (_req: Request, res: Response) => res.redirect('/dashboard'));
 
 // 404 handler
 app.use((_req: Request, res: Response) => {
@@ -61,7 +51,7 @@ const NODE_ENV = process.env.NODE_ENV || 'development';
 
 app.listen(PORT, () => {
   console.log(`\n🚀 Attendance System running on port ${PORT} [${NODE_ENV}]`);
-  console.log(`   Admin panel: http://localhost:${PORT}/admin/login\n`);
+  console.log(`   Portal: http://localhost:${PORT}/\n`);
 });
 
 export default app;

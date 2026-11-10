@@ -45,7 +45,7 @@
       <!-- Form -->
       <div class="p-8">
         <h2 class="text-xl font-semibold text-gray-800 mb-1">Welcome Back</h2>
-        <p class="text-gray-500 text-sm mb-6">Sign in with your account (Admin, Teacher, HR, or Student)</p>
+        <p class="text-gray-500 text-sm mb-6">Sign in with your account credentials</p>
 
         <!-- Alert -->
         <div id="alert" class="hidden bg-red-50 border border-red-200 text-red-700 rounded-xl p-3.5 mb-5 text-sm flex items-center gap-2">
@@ -118,7 +118,7 @@
   <script>
     // Redirect if already logged in
     if (localStorage.getItem('adminToken')) {
-      window.location.href = '/admin/dashboard';
+      window.location.href = '/dashboard';
     }
 
     const form      = document.getElementById('login-form');
@@ -158,7 +158,7 @@
           localStorage.setItem('userRole', data.role || 'admin');
           localStorage.setItem('userDepartment', data.department || '');
           localStorage.setItem('userId', data.id || '');
-          window.location.href = '/admin/dashboard';
+          window.location.href = '/dashboard';
         } else {
           showError(data.message || 'Login failed. Please check your credentials.');
         }
