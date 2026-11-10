@@ -128,7 +128,7 @@
     <div class="flex-1 overflow-y-auto p-6">
 
       <!-- DASHBOARD SECTION -->
-      <section id="section-dashboard" class="fade-in">
+      <section id="section-dashboard" class="hidden fade-in">
         <!-- Stats Cards -->
         <div class="grid grid-cols-1 md:grid-cols-3 gap-5 mb-6">
           <div class="bg-white rounded-2xl p-6 shadow-sm border border-gray-100">
@@ -216,16 +216,16 @@
           <div class="overflow-x-auto">
             <table class="w-full table-hover">
               <thead><tr class="bg-gray-50 text-xs font-semibold text-gray-500 uppercase tracking-wide">
-                <th class="text-left px-5 py-3">Name</th>
-                <th class="text-left px-5 py-3">Email</th>
-                <th class="text-left px-5 py-3">Department</th>
-                <th class="text-left px-5 py-3">Teacher</th>
-                <th class="text-left px-5 py-3">Time</th>
-                <th class="text-left px-5 py-3">Status</th>
-                <th class="text-left px-5 py-3">IP Address</th>
-                <th class="text-left px-5 py-3">MAC Address</th>
-                <th class="text-left px-5 py-3">Flags</th>
-                <th class="text-left px-5 py-3">Actions</th>
+                <th class="text-left px-4 py-3">Name</th>
+                <th class="text-left px-4 py-3">Email</th>
+                <th class="text-left px-4 py-3">Department</th>
+                <th class="text-left px-4 py-3">Teacher</th>
+                <th class="text-left px-4 py-3">Time</th>
+                <th class="text-left px-4 py-3">Status</th>
+                <th class="text-left px-4 py-3">IP Address</th>
+                <th class="text-left px-4 py-3">MAC Address</th>
+                <th class="text-left px-4 py-3">Flags</th>
+                <th class="text-left px-4 py-3">Actions</th>
               </tr></thead>
               <tbody id="today-table-body">
                 <tr><td colspan="10" class="text-center py-10 text-gray-400">Loading…</td></tr>
@@ -268,12 +268,13 @@
                 <th class="text-left px-5 py-3">Date</th>
                 <th class="text-left px-5 py-3">Time</th>
                 <th class="text-left px-5 py-3">Status</th>
-                <th class="text-left px-5 py-3">IP Address</th>
-                <th class="text-left px-5 py-3">MAC Address</th>
-                <th class="text-left px-5 py-3">Flags</th>
+                <th class="text-left px-4 py-3">IP Address</th>
+                <th class="text-left px-4 py-3">MAC Address</th>
+                <th class="text-left px-4 py-3">Flags</th>
+                <th class="text-left px-4 py-3">Actions</th>
               </tr></thead>
               <tbody id="history-table-body">
-                <tr><td colspan="10" class="text-center py-10 text-gray-400">Select a date to view records.</td></tr>
+                <tr><td colspan="11" class="text-center py-10 text-gray-400">Select a date to view records.</td></tr>
               </tbody>
             </table>
           </div>
@@ -862,6 +863,110 @@
     </div>
   </div>
 
+  <!-- Student Calendar View Modal -->
+  <div id="student-calendar-modal" class="hidden fixed inset-0 modal-overlay flex items-center justify-center z-50 p-4">
+    <div class="bg-white rounded-2xl shadow-2xl w-full max-w-4xl max-h-[92vh] flex flex-col fade-in">
+      <div class="p-5 border-b border-gray-100 flex items-center justify-between flex-shrink-0">
+        <div>
+          <h3 id="sc-student-name" class="font-bold text-gray-900 text-lg">Student Attendance Calendar</h3>
+          <p id="sc-student-meta" class="text-xs text-gray-500 mt-0.5">—</p>
+        </div>
+        <div class="flex items-center gap-3">
+          <span id="sc-month-pill" class="px-3 py-1 bg-gray-100 rounded-lg text-xs font-semibold text-gray-700">—</span>
+          <button onclick="closeStudentCalendarModal()" class="text-gray-400 hover:text-gray-700 transition-colors">
+            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+          </button>
+        </div>
+      </div>
+
+      <div class="p-6 space-y-5 overflow-y-auto">
+        <!-- 4 Summary Cards -->
+        <div class="grid grid-cols-2 sm:grid-cols-4 gap-3">
+          <div class="bg-gray-50 rounded-xl p-4 border border-gray-100 flex items-center gap-3">
+            <div class="w-9 h-9 rounded-full bg-green-100 flex items-center justify-center flex-shrink-0">
+              <svg class="w-4 h-4 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+            </div>
+            <div>
+              <p class="text-[11px] font-medium text-gray-500">Present Days</p>
+              <p id="sc-stat-present" class="text-xl font-bold text-gray-900">0</p>
+            </div>
+          </div>
+          <div class="bg-gray-50 rounded-xl p-4 border border-gray-100 flex items-center gap-3">
+            <div class="w-9 h-9 rounded-full bg-amber-100 flex items-center justify-center flex-shrink-0">
+              <svg class="w-4 h-4 text-amber-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+            </div>
+            <div>
+              <p class="text-[11px] font-medium text-gray-500">Late Days</p>
+              <p id="sc-stat-late" class="text-xl font-bold text-amber-600">0</p>
+            </div>
+          </div>
+          <div class="bg-gray-50 rounded-xl p-4 border border-gray-100 flex items-center gap-3">
+            <div class="w-9 h-9 rounded-full bg-red-100 flex items-center justify-center flex-shrink-0">
+              <svg class="w-4 h-4 text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+            </div>
+            <div>
+              <p class="text-[11px] font-medium text-gray-500">Absent Days</p>
+              <p id="sc-stat-absent" class="text-xl font-bold text-red-600">0</p>
+            </div>
+          </div>
+          <div class="bg-gray-50 rounded-xl p-4 border border-gray-100 flex items-center gap-3">
+            <div class="w-9 h-9 rounded-full bg-slate-200 flex items-center justify-center flex-shrink-0">
+              <svg class="w-4 h-4 text-slate-700" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
+            </div>
+            <div>
+              <p class="text-[11px] font-medium text-gray-500">Total Days</p>
+              <p id="sc-stat-total-days" class="text-xl font-bold text-gray-900">0</p>
+            </div>
+          </div>
+        </div>
+
+        <!-- Calendar Card -->
+        <div class="bg-white rounded-2xl border border-gray-200 p-4">
+          <div class="flex items-center justify-between mb-4">
+            <h4 class="font-bold text-gray-800">Attendance Calendar</h4>
+            <div class="flex items-center gap-2">
+              <button onclick="changeStudentCalendarMonth(-1)" class="w-8 h-8 flex items-center justify-center border border-gray-200 rounded-lg text-gray-600 hover:bg-gray-50">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/></svg>
+              </button>
+              <span id="sc-calendar-month-label" class="text-sm font-semibold text-gray-800 min-w-32 text-center">—</span>
+              <button onclick="changeStudentCalendarMonth(1)" class="w-8 h-8 flex items-center justify-center border border-gray-200 rounded-lg text-gray-600 hover:bg-gray-50">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg>
+              </button>
+            </div>
+          </div>
+
+          <div class="grid grid-cols-7 gap-2 text-center text-xs font-medium text-gray-500 mb-2">
+            <div>Sun</div><div>Mon</div><div>Tue</div><div>Wed</div><div>Thu</div><div>Fri</div><div>Sat</div>
+          </div>
+          <div id="sc-calendar-grid" class="grid grid-cols-7 gap-2"></div>
+        </div>
+
+        <!-- Student Month Logs -->
+        <div class="bg-white rounded-xl border border-gray-200 overflow-hidden">
+          <div class="px-4 py-3 border-b border-gray-100 flex items-center justify-between bg-gray-50">
+            <span class="text-xs font-semibold text-gray-700 uppercase tracking-wide">Monthly Attendance Logs</span>
+            <span id="sc-last-network" class="text-xs font-mono text-gray-500"></span>
+          </div>
+          <div class="overflow-x-auto">
+            <table class="w-full table-hover">
+              <thead><tr class="bg-gray-50 text-[11px] font-semibold text-gray-500 uppercase tracking-wide">
+                <th class="text-left px-4 py-2.5">Date</th>
+                <th class="text-left px-4 py-2.5">Time</th>
+                <th class="text-left px-4 py-2.5">Status</th>
+                <th class="text-left px-4 py-2.5">IP Address</th>
+                <th class="text-left px-4 py-2.5">MAC Address</th>
+                <th class="text-left px-4 py-2.5">Flags</th>
+              </tr></thead>
+              <tbody id="sc-logs-body">
+                <tr><td colspan="6" class="text-center py-6 text-gray-400 text-sm">Loading…</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
   <!-- Confirm Delete Modal -->
   <div id="confirm-modal" class="hidden fixed inset-0 modal-overlay flex items-center justify-center z-50 p-4">
     <div class="bg-white rounded-2xl shadow-2xl w-full max-w-sm fade-in p-6 text-center">
@@ -1095,6 +1200,10 @@
 
       document.getElementById('page-title').textContent = sectionTitles[name] || 'Portal';
       currentSection = name;
+      localStorage.setItem('activeTab', name);
+      if (window.location.hash !== `#${name}`) {
+        history.replaceState(null, '', `#${name}`);
+      }
 
       if (name === 'dashboard') loadDashboard();
       if (name === 'today') loadToday();
@@ -1221,20 +1330,26 @@
           : statusPill(st);
         return `
         <tr class="border-t border-gray-50">
-          <td class="px-5 py-3.5 text-sm font-medium text-gray-900">${esc(r.user?.name)}</td>
-          <td class="px-5 py-3.5 text-sm text-gray-500">${esc(r.user?.email)}</td>
-          <td class="px-5 py-3.5 text-sm text-gray-500">${esc(r.user?.department || r.user?.teacher?.department || '—')}</td>
-          <td class="px-5 py-3.5 text-sm text-gray-500">${esc(r.user?.teacher?.name || '—')}</td>
-          <td class="px-5 py-3.5 text-sm text-gray-500 whitespace-nowrap">${formatTime(r.markedAt)}</td>
-          <td class="px-5 py-3.5">${statusCell}</td>
-          <td class="px-5 py-3.5 text-sm text-gray-500 font-mono">${esc(r.ipAddress || '—')}</td>
-          <td class="px-5 py-3.5 text-sm text-gray-500 font-mono">${esc(r.macAddress || '—')}</td>
-          <td class="px-5 py-3.5">${flagBadges(r)}</td>
-          <td class="px-5 py-3.5">
-            ${canManage ? `
-            <button onclick="deleteAttendance('${r.id}')" class="text-red-400 hover:text-red-600 transition-colors" title="Delete">
-              <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
-            </button>` : '<span class="text-gray-300 text-xs">—</span>'}
+          <td class="px-4 py-3 text-sm font-medium text-gray-900">${esc(r.user?.name)}</td>
+          <td class="px-4 py-3 text-sm text-gray-500">${esc(r.user?.email)}</td>
+          <td class="px-4 py-3 text-sm text-gray-500">${esc(r.user?.department || r.user?.teacher?.department || '—')}</td>
+          <td class="px-4 py-3 text-sm text-gray-500">${esc(r.user?.teacher?.name || '—')}</td>
+          <td class="px-4 py-3 text-sm text-gray-500 whitespace-nowrap">${formatTime(r.markedAt)}</td>
+          <td class="px-4 py-3">${statusCell}</td>
+          <td class="px-4 py-3 text-sm text-gray-500 font-mono">${esc(r.ipAddress || '—')}</td>
+          <td class="px-4 py-3 text-sm text-gray-500 font-mono">${esc(r.macAddress || '—')}</td>
+          <td class="px-4 py-3">${flagBadges(r)}</td>
+          <td class="px-4 py-3 whitespace-nowrap">
+            <div class="flex items-center gap-2">
+              <button onclick="viewStudentCalendar('${r.user?.id}')" class="inline-flex items-center gap-1 px-2.5 py-1 bg-blue-50 text-blue-700 hover:bg-blue-100 rounded-lg text-xs font-semibold transition-colors" title="View Calendar">
+                <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/></svg>
+                View
+              </button>
+              ${canManage ? `
+              <button onclick="deleteAttendance('${r.id}')" class="text-red-400 hover:text-red-600 transition-colors p-1" title="Delete">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
+              </button>` : ''}
+            </div>
           </td>
         </tr>`;
       }).join('');
@@ -1280,7 +1395,7 @@
         const tbody = document.getElementById('history-table-body');
         const canManage = hasPerm('manage_attendance');
         if (!historyRecords.length) {
-          tbody.innerHTML = '<tr><td colspan="10" class="text-center py-10 text-gray-400">No records found for this date.</td></tr>';
+          tbody.innerHTML = '<tr><td colspan="11" class="text-center py-10 text-gray-400">No records found for this date.</td></tr>';
           return;
         }
         tbody.innerHTML = historyRecords.map(r => {
@@ -1294,16 +1409,22 @@
             : statusPill(st);
           return `
           <tr class="border-t border-gray-50">
-            <td class="px-5 py-3.5 text-sm font-medium text-gray-900">${esc(r.user?.name)}</td>
-            <td class="px-5 py-3.5 text-sm text-gray-500">${esc(r.user?.email)}</td>
-            <td class="px-5 py-3.5 text-sm text-gray-500">${esc(r.user?.department || r.user?.teacher?.department || '—')}</td>
-            <td class="px-5 py-3.5 text-sm text-gray-500">${esc(r.user?.teacher?.name || '—')}</td>
-            <td class="px-5 py-3.5 text-sm text-gray-500">${r.date}</td>
-            <td class="px-5 py-3.5 text-sm text-gray-500 whitespace-nowrap">${formatTime(r.markedAt)}</td>
-            <td class="px-5 py-3.5">${statusCell}</td>
-            <td class="px-5 py-3.5 text-sm text-gray-500 font-mono">${esc(r.ipAddress || '—')}</td>
-            <td class="px-5 py-3.5 text-sm text-gray-500 font-mono">${esc(r.macAddress || '—')}</td>
-            <td class="px-5 py-3.5">${flagBadges(r)}</td>
+            <td class="px-4 py-3 text-sm font-medium text-gray-900">${esc(r.user?.name)}</td>
+            <td class="px-4 py-3 text-sm text-gray-500">${esc(r.user?.email)}</td>
+            <td class="px-4 py-3 text-sm text-gray-500">${esc(r.user?.department || r.user?.teacher?.department || '—')}</td>
+            <td class="px-4 py-3 text-sm text-gray-500">${esc(r.user?.teacher?.name || '—')}</td>
+            <td class="px-4 py-3 text-sm text-gray-500">${r.date}</td>
+            <td class="px-4 py-3 text-sm text-gray-500 whitespace-nowrap">${formatTime(r.markedAt)}</td>
+            <td class="px-4 py-3">${statusCell}</td>
+            <td class="px-4 py-3 text-sm text-gray-500 font-mono">${esc(r.ipAddress || '—')}</td>
+            <td class="px-4 py-3 text-sm text-gray-500 font-mono">${esc(r.macAddress || '—')}</td>
+            <td class="px-4 py-3">${flagBadges(r)}</td>
+            <td class="px-4 py-3 whitespace-nowrap">
+              <button onclick="viewStudentCalendar('${r.user?.id}')" class="inline-flex items-center gap-1 px-2.5 py-1 bg-blue-50 text-blue-700 hover:bg-blue-100 rounded-lg text-xs font-semibold transition-colors" title="View Calendar">
+                <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/></svg>
+                View
+              </button>
+            </td>
           </tr>`;
         }).join('');
       } catch (e) {
@@ -1364,6 +1485,11 @@
           <td class="px-5 py-3.5 text-sm text-gray-600">${relationText}</td>
           <td class="px-5 py-3.5 text-sm text-gray-500">${formatDate(u.createdAt)}</td>
           <td class="px-5 py-3.5 flex items-center gap-2">
+            ${u.role === 'student' ? `
+            <button onclick="viewStudentCalendar('${u.id}')" class="inline-flex items-center gap-1 px-2.5 py-1 bg-blue-50 text-blue-700 hover:bg-blue-100 rounded-lg text-xs font-semibold transition-colors" title="View Calendar">
+              <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/></svg>
+              View
+            </button>` : ''}
             ${canEdit ? `
             <button onclick='openUserModal(${JSON.stringify(u)})' class="text-blue-400 hover:text-blue-600 transition-colors" title="Edit">
               <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/></svg>
@@ -1372,7 +1498,7 @@
             <button onclick="deleteUser('${u.id}', '${esc(u.name)}')" class="text-red-400 hover:text-red-600 transition-colors" title="Delete">
               <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
             </button>` : ''}
-            ${!canEdit && !canDelete ? '<span class="text-gray-300 text-xs">—</span>' : ''}
+            ${u.role !== 'student' && !canEdit && !canDelete ? '<span class="text-gray-300 text-xs">—</span>' : ''}
           </td>
         </tr>`;
       }).join('');
@@ -1796,6 +1922,7 @@
       localStorage.removeItem('userRole');
       localStorage.removeItem('userDepartment');
       localStorage.removeItem('userId');
+      localStorage.removeItem('activeTab');
       window.location.href = '/admin/login';
     }
 
@@ -2133,14 +2260,11 @@
       return `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
     }
 
-    function renderAttendanceCalendar(monthStr, todayStr, records) {
+    function buildCalendarHtml(monthStr, todayStr, records) {
       const [yStr, mStr] = monthStr.split('-');
       const year = parseInt(yStr, 10);
       const monthIdx = parseInt(mStr, 10) - 1;
       const monthLabel = new Date(year, monthIdx, 1).toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
-
-      document.getElementById('calendar-month-label').textContent = monthLabel;
-      document.getElementById('my-month-pill').textContent = monthLabel;
 
       const firstDow = new Date(year, monthIdx, 1).getDay(); // 0=Sun..6=Sat
       const daysInMonth = new Date(year, monthIdx + 1, 0).getDate();
@@ -2230,7 +2354,90 @@
         }
       }
 
-      document.getElementById('attendance-calendar-grid').innerHTML = cells.join('');
+      return { monthLabel, html: cells.join('') };
+    }
+
+    function renderAttendanceCalendar(monthStr, todayStr, records) {
+      const { monthLabel, html } = buildCalendarHtml(monthStr, todayStr, records);
+      document.getElementById('calendar-month-label').textContent = monthLabel;
+      document.getElementById('my-month-pill').textContent = monthLabel;
+      document.getElementById('attendance-calendar-grid').innerHTML = html;
+    }
+
+    // ── TEACHER/ADMIN: STUDENT CALENDAR MODAL ──────────────────
+    let selectedStudentId = null;
+    let studentCalendarMonth = new Date().toISOString().slice(0, 7);
+
+    async function viewStudentCalendar(studentId) {
+      if (!studentId) return;
+      selectedStudentId = studentId;
+      studentCalendarMonth = new Date().toISOString().slice(0, 7);
+      document.getElementById('student-calendar-modal').classList.remove('hidden');
+      await loadStudentCalendar();
+    }
+
+    function closeStudentCalendarModal() {
+      document.getElementById('student-calendar-modal').classList.add('hidden');
+      selectedStudentId = null;
+    }
+
+    function changeStudentCalendarMonth(delta) {
+      const [yStr, mStr] = studentCalendarMonth.split('-');
+      const d = new Date(parseInt(yStr, 10), parseInt(mStr, 10) - 1 + delta, 1);
+      studentCalendarMonth = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+      loadStudentCalendar();
+    }
+
+    async function loadStudentCalendar() {
+      if (!selectedStudentId) return;
+      try {
+        const data = await api('GET', `/students/${selectedStudentId}/attendance?month=${studentCalendarMonth}`);
+        if (!data?.success) {
+          showToast('error', data?.message || 'Could not load student calendar.');
+          return;
+        }
+        const st = data.student || {};
+        document.getElementById('sc-student-name').textContent = `${st.name || 'Student'} — Attendance Calendar`;
+        const metaParts = [st.email, st.department, st.teacher?.name ? `Teacher: ${st.teacher.name}` : null].filter(Boolean);
+        document.getElementById('sc-student-meta').textContent = metaParts.join(' • ');
+
+        const sum = data.summary || { presentDays: 0, lateDays: 0, absentDays: 0, totalDays: 0 };
+        document.getElementById('sc-stat-present').textContent = sum.presentDays ?? 0;
+        document.getElementById('sc-stat-late').textContent = sum.lateDays ?? 0;
+        document.getElementById('sc-stat-absent').textContent = sum.absentDays ?? 0;
+        document.getElementById('sc-stat-total-days').textContent = sum.totalDays ?? 0;
+
+        const records = data.records || [];
+        const { monthLabel, html } = buildCalendarHtml(
+          data.month || studentCalendarMonth,
+          data.today || new Date().toISOString().split('T')[0],
+          records
+        );
+        document.getElementById('sc-calendar-month-label').textContent = monthLabel;
+        document.getElementById('sc-month-pill').textContent = monthLabel;
+        document.getElementById('sc-calendar-grid').innerHTML = html;
+
+        document.getElementById('sc-last-network').textContent =
+          data.lastIpAddress ? `Last IP: ${data.lastIpAddress} • MAC: ${data.lastMacAddress || 'N/A'}` : '';
+
+        const tbody = document.getElementById('sc-logs-body');
+        if (!records.length) {
+          tbody.innerHTML = '<tr><td colspan="6" class="text-center py-6 text-gray-400 text-sm">No attendance records for this month.</td></tr>';
+          return;
+        }
+        tbody.innerHTML = [...records].reverse().map(r => `
+          <tr class="border-t border-gray-50">
+            <td class="px-4 py-2.5 text-sm font-medium text-gray-900">${esc(r.date)}</td>
+            <td class="px-4 py-2.5 text-sm text-gray-500 whitespace-nowrap">${formatTime(r.markedAt)}</td>
+            <td class="px-4 py-2.5">${statusPill(r.status)}</td>
+            <td class="px-4 py-2.5 text-sm text-gray-500 font-mono">${esc(r.ipAddress || '—')}</td>
+            <td class="px-4 py-2.5 text-sm text-gray-500 font-mono">${esc(r.macAddress || '—')}</td>
+            <td class="px-4 py-2.5">${flagBadges(r)}</td>
+          </tr>
+        `).join('');
+      } catch (e) {
+        showToast('error', 'Failed to load student calendar.');
+      }
     }
 
     async function loadMyAttendance() {
@@ -2293,9 +2500,24 @@
       }
       applyRoleUI();
       await loadFilters();
-      const firstMenu = (currentUser.menus && currentUser.menus[0]) || 'my_profile';
-      showSection(firstMenu);
+      const allowedMenus = currentUser.menus || [];
+      const hashTab = window.location.hash.replace(/^#/, '');
+      const savedTab = localStorage.getItem('activeTab') || '';
+      const candidate = hashTab || savedTab;
+      const initialTab =
+        candidate && allowedMenus.includes(candidate) && document.getElementById(`section-${candidate}`)
+          ? candidate
+          : (allowedMenus[0] || 'my_profile');
+      showSection(initialTab);
     }
+
+    window.addEventListener('hashchange', () => {
+      const hashTab = window.location.hash.replace(/^#/, '');
+      const allowedMenus = currentUser.menus || [];
+      if (hashTab && allowedMenus.includes(hashTab) && hashTab !== currentSection) {
+        showSection(hashTab);
+      }
+    });
 
     initDashboard();
   </script>

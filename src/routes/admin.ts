@@ -300,92 +300,136 @@ router.get('/my/profile', requirePermission('view_own_profile'), async (req: Req
   }
 });
 
+async function buildMonthlyAttendanceData(userId: string, rawMonth?: unknown) {
+  const today = getTodayDate();
+  const defaultMonth = today.slice(0, 7);
+  const month = typeof rawMonth === 'string' && /^\d{4}-\d{2}$/.test(rawMonth)
+    ? rawMonth
+    : defaultMonth;
+
+  const [yearStr, monthStr] = month.split('-');
+  const year = parseInt(yearStr, 10);
+  const monthIndex = parseInt(monthStr, 10) - 1;
+  const daysInMonth = new Date(year, monthIndex + 1, 0).getDate();
+
+  const monthRecords = await prisma.attendance.findMany({
+    where: {
+      userId,
+      date: { startsWith: `${month}-` },
+    },
+    orderBy: { date: 'asc' },
+  });
+
+  const latestRecord = await prisma.attendance.findFirst({
+    where: { userId },
+    orderBy: { markedAt: 'desc' },
+  });
+
+  const todayRecord = await prisma.attendance.findFirst({
+    where: { userId, date: today },
+  });
+
+  const recordByDate = new Map(monthRecords.map((r) => [r.date, r]));
+
+  let presentDays = 0;
+  let lateDays = 0;
+  let absentDays = 0;
+  let totalDays = 0;
+
+  // Weekends: Friday (5) and Saturday (6)
+  const isWeekendDay = (dayOfWeek: number): boolean => dayOfWeek === 5 || dayOfWeek === 6;
+
+  for (let d = 1; d <= daysInMonth; d++) {
+    const dateStr = `${month}-${String(d).padStart(2, '0')}`;
+    if (dateStr > today) break;
+
+    const dow = new Date(year, monthIndex, d).getDay();
+    if (isWeekendDay(dow)) continue;
+
+    totalDays++;
+    const rec = recordByDate.get(dateStr);
+    if (rec) {
+      if (rec.status === 'late') {
+        lateDays++;
+      } else {
+        presentDays++;
+      }
+    } else if (dateStr < today) {
+      absentDays++;
+    }
+  }
+
+  const totalPresent = await prisma.attendance.count({ where: { userId } });
+
+  return {
+    month,
+    today,
+    summary: {
+      presentDays,
+      lateDays,
+      absentDays,
+      totalDays,
+    },
+    totalPresent,
+    markedToday: !!todayRecord,
+    todayMarkedAt: todayRecord?.markedAt ?? null,
+    lastIpAddress: latestRecord?.ipAddress ?? null,
+    lastMacAddress: latestRecord?.macAddress ?? null,
+    records: monthRecords,
+  };
+}
+
 // GET /api/admin/my/attendance?month=YYYY-MM
 router.get('/my/attendance', requirePermission('view_own_attendance'), async (req: Request, res: Response): Promise<void> => {
   try {
-    const panelUser = req.admin!;
-    const today = getTodayDate();
-    const defaultMonth = today.slice(0, 7);
-    const reqMonth = typeof req.query.month === 'string' && /^\d{4}-\d{2}$/.test(req.query.month)
-      ? req.query.month
-      : defaultMonth;
-
-    const [yearStr, monthStr] = reqMonth.split('-');
-    const year = parseInt(yearStr, 10);
-    const monthIndex = parseInt(monthStr, 10) - 1; // 0-based
-    const daysInMonth = new Date(year, monthIndex + 1, 0).getDate();
-
-    const monthRecords = await prisma.attendance.findMany({
-      where: {
-        userId: panelUser.id,
-        date: { startsWith: `${reqMonth}-` },
-      },
-      orderBy: { date: 'asc' },
-    });
-
-    const latestRecord = await prisma.attendance.findFirst({
-      where: { userId: panelUser.id },
-      orderBy: { markedAt: 'desc' },
-    });
-
-    const todayRecord = await prisma.attendance.findFirst({
-      where: { userId: panelUser.id, date: today },
-    });
-
-    const recordByDate = new Map(monthRecords.map((r) => [r.date, r]));
-
-    let presentDays = 0;
-    let lateDays = 0;
-    let absentDays = 0;
-    let totalDays = 0;
-
-    // Weekends: Friday (5) and Saturday (6)
-    const isWeekendDay = (dayOfWeek: number): boolean => dayOfWeek === 5 || dayOfWeek === 6;
-
-    for (let d = 1; d <= daysInMonth; d++) {
-      const dateStr = `${reqMonth}-${String(d).padStart(2, '0')}`;
-      if (dateStr > today) break; // Future dates not counted yet
-
-      const dow = new Date(year, monthIndex, d).getDay();
-      if (isWeekendDay(dow)) continue;
-
-      totalDays++;
-      const rec = recordByDate.get(dateStr);
-      if (rec) {
-        if (rec.status === 'late') {
-          lateDays++;
-        } else {
-          presentDays++; // "present" and "late_approved" count as present
-        }
-      } else if (dateStr < today) {
-        absentDays++;
-      }
-    }
-
-    const totalAllTime = await prisma.attendance.count({ where: { userId: panelUser.id } });
-
-    res.json({
-      success: true,
-      month: reqMonth,
-      today,
-      summary: {
-        presentDays,
-        lateDays,
-        absentDays,
-        totalDays,
-      },
-      totalPresent: totalAllTime,
-      markedToday: !!todayRecord,
-      todayMarkedAt: todayRecord?.markedAt ?? null,
-      lastIpAddress: latestRecord?.ipAddress ?? null,
-      lastMacAddress: latestRecord?.macAddress ?? null,
-      records: monthRecords,
-    });
+    const data = await buildMonthlyAttendanceData(req.admin!.id, req.query.month);
+    res.json({ success: true, ...data });
   } catch (err) {
     console.error('Get own attendance error:', err);
     res.status(500).json({ success: false, message: 'Server error.' });
   }
 });
+
+// GET /api/admin/students/:id/attendance?month=YYYY-MM — View a specific student's calendar (scoped)
+router.get(
+  '/students/:id/attendance',
+  requireAnyPermission(['view_attendance', 'view_users']),
+  async (req: Request, res: Response): Promise<void> => {
+    try {
+      const id = String(req.params.id);
+      const panelUser = req.admin!;
+
+      const student = await prisma.user.findUnique({
+        where: { id },
+        select: {
+          id: true,
+          name: true,
+          email: true,
+          role: true,
+          department: true,
+          teacherId: true,
+          teacher: { select: { id: true, name: true, email: true, department: true } },
+        },
+      });
+
+      if (!student) {
+        res.status(404).json({ success: false, message: 'Student not found.' });
+        return;
+      }
+
+      if (!(await canAccessStudent(panelUser, student))) {
+        res.status(403).json({ success: false, message: 'You cannot view attendance for students outside your scope.' });
+        return;
+      }
+
+      const data = await buildMonthlyAttendanceData(student.id, req.query.month);
+      res.json({ success: true, student, ...data });
+    } catch (err) {
+      console.error('Get student calendar error:', err);
+      res.status(500).json({ success: false, message: 'Server error.' });
+    }
+  }
+);
 
 // ─────────────────────────────────────────
 // FILTERS (Departments, Teachers, Roles)
