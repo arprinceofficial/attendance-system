@@ -490,19 +490,32 @@
 
       <!-- ROLES & RBAC SECTION -->
       <section id="section-roles" class="hidden fade-in">
-        <div class="space-y-6">
-          <div class="flex flex-wrap items-center justify-between gap-4">
+        <div class="bg-white rounded-2xl shadow-sm border border-gray-100">
+          <div class="p-5 border-b border-gray-100 flex flex-wrap gap-3 items-center justify-between">
             <div>
-              <h3 class="text-lg font-bold text-gray-800">Roles, Permissions &amp; Left Menu Manager</h3>
-              <p class="text-sm text-gray-500 mt-1">Create custom roles (such as HR) and decide exactly which permissions, data scope, and left sidebar menus each role gets.</p>
+              <h3 class="font-semibold text-gray-800">Roles, Permissions &amp; Left Menu Manager</h3>
+              <p class="text-xs text-gray-500 mt-0.5">Click View on any role to inspect its check-wise menus and permissions, or configure access levels.</p>
             </div>
-            <button onclick="openRoleModal()" class="flex items-center gap-2 bg-blue-600 text-white hover:bg-blue-700 px-4 py-2.5 rounded-xl text-sm font-semibold transition-colors shadow-sm">
+            <button onclick="openRoleModal()" class="flex items-center gap-2 bg-blue-600 text-white hover:bg-blue-700 px-4 py-2 rounded-xl text-sm font-medium transition-colors">
               <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
               Create Role
             </button>
           </div>
-          <div id="roles-grid" class="grid grid-cols-1 lg:grid-cols-2 gap-5">
-            <div class="bg-white rounded-2xl p-8 text-center text-gray-400 border border-gray-100">Loading roles…</div>
+          <div class="overflow-x-auto">
+            <table class="w-full table-hover">
+              <thead><tr class="bg-gray-50 text-xs font-semibold text-gray-500 uppercase tracking-wide">
+                <th class="text-left px-5 py-3">Role</th>
+                <th class="text-left px-5 py-3">Key</th>
+                <th class="text-left px-5 py-3">Data Scope</th>
+                <th class="text-left px-5 py-3">Sidebar Menus</th>
+                <th class="text-left px-5 py-3">Permissions</th>
+                <th class="text-left px-5 py-3">Users</th>
+                <th class="text-left px-5 py-3">Actions</th>
+              </tr></thead>
+              <tbody id="roles-table-body">
+                <tr><td colspan="7" class="text-center py-10 text-gray-400">Loading roles…</td></tr>
+              </tbody>
+            </table>
           </div>
         </div>
       </section>
@@ -663,6 +676,59 @@
   </main>
 
   <!-- ─────── MODALS ─────── -->
+
+  <!-- Role Check-Wise View Modal -->
+  <div id="role-view-modal" class="hidden fixed inset-0 modal-overlay flex items-center justify-center z-50 p-4">
+    <div class="bg-white rounded-2xl shadow-2xl w-full max-w-3xl max-h-[90vh] flex flex-col fade-in">
+      <div class="p-6 border-b border-gray-100 flex items-start justify-between gap-4 flex-shrink-0">
+        <div>
+          <div class="flex flex-wrap items-center gap-2">
+            <h3 id="rv-title" class="font-bold text-gray-900 text-lg">Role Details</h3>
+            <span id="rv-slug" class="font-mono text-xs bg-gray-100 text-gray-600 px-2 py-0.5 rounded">—</span>
+            <span id="rv-system-badge" class="hidden text-xs bg-purple-50 text-purple-700 px-2 py-0.5 rounded-full font-medium">System</span>
+          </div>
+          <p id="rv-description" class="text-xs text-gray-500 mt-1">—</p>
+        </div>
+        <button onclick="closeRoleViewModal()" class="text-gray-400 hover:text-gray-700 transition-colors">
+          <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+        </button>
+      </div>
+      <div class="p-6 space-y-6 overflow-y-auto">
+        <div class="flex flex-wrap items-center gap-3 bg-gray-50 border border-gray-100 rounded-xl p-3.5 text-xs">
+          <div class="flex items-center gap-1.5">
+            <span class="font-semibold text-gray-500">Data Scope:</span>
+            <span id="rv-scope" class="px-2.5 py-0.5 bg-amber-50 text-amber-800 rounded-md font-semibold">—</span>
+          </div>
+          <div class="flex items-center gap-1.5">
+            <span class="font-semibold text-gray-500">Users:</span>
+            <span id="rv-users" class="px-2.5 py-0.5 bg-gray-200 text-gray-700 rounded-md font-semibold">0</span>
+          </div>
+          <div class="flex items-center gap-1.5">
+            <span class="font-semibold text-gray-500">Menus:</span>
+            <span id="rv-menus-count" class="px-2.5 py-0.5 bg-blue-50 text-blue-700 rounded-md font-semibold">0</span>
+          </div>
+          <div class="flex items-center gap-1.5">
+            <span class="font-semibold text-gray-500">Permissions:</span>
+            <span id="rv-perms-count" class="px-2.5 py-0.5 bg-green-50 text-green-700 rounded-md font-semibold">0</span>
+          </div>
+        </div>
+
+        <div>
+          <h4 class="text-sm font-semibold text-gray-800 mb-2.5">Left Sidebar Menus</h4>
+          <div id="rv-menus-checklist" class="grid grid-cols-1 sm:grid-cols-2 gap-2.5"></div>
+        </div>
+
+        <div>
+          <h4 class="text-sm font-semibold text-gray-800 mb-2.5">Action Permissions</h4>
+          <div id="rv-perms-checklist" class="space-y-4"></div>
+        </div>
+      </div>
+      <div class="p-5 border-t border-gray-100 flex items-center justify-end gap-3 flex-shrink-0 bg-gray-50 rounded-b-2xl">
+        <button type="button" onclick="closeRoleViewModal()" class="px-4 py-2 bg-white border border-gray-200 text-gray-700 hover:bg-gray-100 rounded-xl text-sm font-medium transition-colors">Close</button>
+        <button type="button" onclick="editFromRoleView()" class="px-4 py-2 bg-blue-600 text-white hover:bg-blue-700 rounded-xl text-sm font-semibold transition-colors">Configure Menus &amp; Permissions</button>
+      </div>
+    </div>
+  </div>
 
   <!-- Role RBAC Modal -->
   <div id="role-modal" class="hidden fixed inset-0 modal-overlay flex items-center justify-center z-50 p-4">
@@ -2067,6 +2133,8 @@
       own: 'Own Info & Attendance Only',
     };
 
+    let viewingRoleId = null;
+
     async function loadRoles() {
       try {
         const data = await api('GET', '/roles');
@@ -2074,64 +2142,138 @@
         allRoles = data.roles || [];
         menuCatalog = data.menuCatalog || [];
         permissionCatalog = data.permissionCatalog || [];
-        renderRolesGrid();
+        renderRolesList();
       } catch (e) {
         showToast('error', 'Failed to load roles.');
       }
     }
 
-    function renderRolesGrid() {
-      const grid = document.getElementById('roles-grid');
+    function renderRolesList() {
+      const tbody = document.getElementById('roles-table-body');
+      if (!tbody) return;
       if (!allRoles.length) {
-        grid.innerHTML = '<div class="col-span-2 bg-white rounded-2xl p-8 text-center text-gray-400">No roles found.</div>';
+        tbody.innerHTML = '<tr><td colspan="7" class="text-center py-10 text-gray-400">No roles found.</td></tr>';
         return;
       }
-      grid.innerHTML = allRoles.map(r => {
-        const menuPills = (r.menus || []).map(m => {
-          const item = menuCatalog.find(mc => mc.key === m);
-          return `<span class="px-2 py-0.5 bg-blue-50 text-blue-700 rounded-md text-xs font-medium">${esc(item ? item.label : m)}</span>`;
-        }).join('') || '<span class="text-xs text-gray-400">No sidebar menus</span>';
+      const totalMenus = menuCatalog.length;
+      const totalPerms = permissionCatalog.length;
 
+      tbody.innerHTML = allRoles.map(r => {
+        const menuCount = (r.menus || []).length;
+        const permCount = (r.permissions || []).length;
         return `
-          <div class="bg-white rounded-2xl border border-gray-200 shadow-sm p-6 flex flex-col justify-between gap-4">
-            <div>
-              <div class="flex items-start justify-between gap-3 mb-2">
-                <div>
-                  <div class="flex items-center gap-2">
-                    <h4 class="font-bold text-gray-900 text-base">${esc(r.label)}</h4>
-                    <span class="font-mono text-xs bg-gray-100 text-gray-600 px-2 py-0.5 rounded">${esc(r.name)}</span>
-                    ${r.isSystem ? '<span class="text-xs bg-purple-50 text-purple-700 px-2 py-0.5 rounded-full font-medium">System</span>' : ''}
-                  </div>
-                  <p class="text-xs text-gray-500 mt-1">${esc(r.description || 'No description')}</p>
-                </div>
-                <span class="text-xs font-semibold text-gray-600 bg-gray-100 px-2.5 py-1 rounded-full flex-shrink-0">${r.userCount ?? 0} user${r.userCount === 1 ? '' : 's'}</span>
-              </div>
-
-              <div class="mt-3 flex flex-wrap items-center gap-2 text-xs">
-                <span class="font-semibold text-gray-600">Scope:</span>
-                <span class="px-2 py-0.5 bg-amber-50 text-amber-800 rounded-md font-medium">${esc(scopeLabels[r.dataScope] || r.dataScope)}</span>
-                <span class="font-semibold text-gray-600 ml-2">Permissions:</span>
-                <span class="px-2 py-0.5 bg-green-50 text-green-700 rounded-md font-medium">${(r.permissions || []).length} enabled</span>
-              </div>
-
-              <div class="mt-3">
-                <p class="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1.5">Left Sidebar Menus</p>
-                <div class="flex flex-wrap gap-1.5">${menuPills}</div>
-              </div>
+        <tr class="border-t border-gray-50">
+          <td class="px-5 py-3.5">
+            <div class="flex items-center gap-2">
+              <span class="text-sm font-semibold text-gray-900">${esc(r.label)}</span>
+              ${r.isSystem ? '<span class="text-xs bg-purple-50 text-purple-700 px-2 py-0.5 rounded-full font-medium">System</span>' : ''}
             </div>
-
-            <div class="flex items-center gap-2 pt-3 border-t border-gray-100">
-              <button onclick='openRoleModal(${JSON.stringify(r)})' class="flex-1 px-3 py-2 bg-blue-50 text-blue-700 hover:bg-blue-100 rounded-xl text-xs font-semibold transition-colors">
-                Configure Menus &amp; Permissions
+            <p class="text-xs text-gray-400 mt-0.5 line-clamp-1">${esc(r.description || 'No description')}</p>
+          </td>
+          <td class="px-5 py-3.5">
+            <span class="font-mono text-xs bg-gray-100 text-gray-700 px-2 py-0.5 rounded">${esc(r.name)}</span>
+          </td>
+          <td class="px-5 py-3.5">
+            <span class="px-2.5 py-1 bg-amber-50 text-amber-800 rounded-full text-xs font-medium">${esc(scopeLabels[r.dataScope] || r.dataScope)}</span>
+          </td>
+          <td class="px-5 py-3.5">
+            <span class="px-2.5 py-1 bg-blue-50 text-blue-700 rounded-full text-xs font-semibold">${menuCount}${totalMenus ? ' / ' + totalMenus : ''}</span>
+          </td>
+          <td class="px-5 py-3.5">
+            <span class="px-2.5 py-1 bg-green-50 text-green-700 rounded-full text-xs font-semibold">${permCount}${totalPerms ? ' / ' + totalPerms : ''}</span>
+          </td>
+          <td class="px-5 py-3.5 text-sm text-gray-600 font-medium">${r.userCount ?? 0}</td>
+          <td class="px-5 py-3.5 whitespace-nowrap">
+            <div class="flex items-center gap-2">
+              <button onclick="viewRoleById('${esc(r.id)}')" class="inline-flex items-center gap-1 px-2.5 py-1 bg-blue-50 text-blue-700 hover:bg-blue-100 rounded-lg text-xs font-semibold transition-colors" title="View Check-wise Permissions">
+                <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/></svg>
+                View
+              </button>
+              <button onclick='openRoleModal(${JSON.stringify(r)})' class="text-blue-400 hover:text-blue-600 transition-colors p-1" title="Configure">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/></svg>
               </button>
               ${!r.isSystem ? `
-                <button onclick="deleteRole('${r.id}', '${esc(r.label)}')" class="px-3 py-2 bg-red-50 text-red-600 hover:bg-red-100 rounded-xl text-xs font-semibold transition-colors">
-                  Delete
-                </button>` : ''}
+              <button onclick="deleteRole('${r.id}', '${esc(r.label)}')" class="text-red-400 hover:text-red-600 transition-colors p-1" title="Delete">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
+              </button>` : ''}
             </div>
-          </div>
-        `;
+          </td>
+        </tr>`;
       }).join('');
+    }
+
+    function renderCheckWiseItem(checked, title, subtitle) {
+      const boxCls = checked
+        ? 'bg-emerald-600 border-emerald-600 text-white'
+        : 'bg-white border-gray-300 text-transparent';
+      const wrapCls = checked
+        ? 'bg-emerald-50/70 border-emerald-200 text-gray-900'
+        : 'bg-gray-50/70 border-gray-200 text-gray-400';
+      return `
+        <div class="flex items-start gap-2.5 p-2.5 rounded-xl border ${wrapCls}">
+          <span class="mt-0.5 w-4 h-4 rounded flex items-center justify-center border flex-shrink-0 ${boxCls}">
+            <svg class="w-3 h-3" fill="none" stroke="currentColor" stroke-width="3" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/></svg>
+          </span>
+          <div class="min-w-0 text-xs">
+            <p class="font-semibold ${checked ? 'text-gray-900' : 'text-gray-500'}">${esc(title)}</p>
+            ${subtitle ? `<p class="${checked ? 'text-emerald-700' : 'text-gray-400'} mt-0.5">${esc(subtitle)}</p>` : ''}
+          </div>
+        </div>`;
+    }
+
+    function viewRoleById(id) {
+      const role = allRoles.find(r => r.id === id);
+      if (!role) return;
+      openRoleViewModal(role);
+    }
+
+    function openRoleViewModal(role) {
+      viewingRoleId = role.id;
+      document.getElementById('rv-title').textContent = role.label || role.name;
+      document.getElementById('rv-slug').textContent = role.name;
+      document.getElementById('rv-system-badge').classList.toggle('hidden', !role.isSystem);
+      document.getElementById('rv-description').textContent = role.description || 'No description';
+      document.getElementById('rv-scope').textContent = scopeLabels[role.dataScope] || role.dataScope;
+      document.getElementById('rv-users').textContent = `${role.userCount ?? 0} user${role.userCount === 1 ? '' : 's'}`;
+
+      const selectedMenus = new Set(role.menus || []);
+      const selectedPerms = new Set(role.permissions || []);
+
+      document.getElementById('rv-menus-count').textContent = `${selectedMenus.size} / ${menuCatalog.length}`;
+      document.getElementById('rv-perms-count').textContent = `${selectedPerms.size} / ${permissionCatalog.length}`;
+
+      document.getElementById('rv-menus-checklist').innerHTML = menuCatalog.map(m =>
+        renderCheckWiseItem(selectedMenus.has(m.key), m.label, m.description)
+      ).join('');
+
+      const groupedPerms = {};
+      for (const p of permissionCatalog) {
+        const g = p.group || 'General';
+        if (!groupedPerms[g]) groupedPerms[g] = [];
+        groupedPerms[g].push(p);
+      }
+
+      document.getElementById('rv-perms-checklist').innerHTML = Object.entries(groupedPerms).map(([group, perms]) => `
+        <div class="bg-gray-50/50 border border-gray-100 rounded-xl p-3">
+          <p class="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">${esc(group)}</p>
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
+            ${perms.map(p => renderCheckWiseItem(selectedPerms.has(p.key), p.label, selectedPerms.has(p.key) ? 'Allowed' : 'Not allowed')).join('')}
+          </div>
+        </div>
+      `).join('');
+
+      document.getElementById('role-view-modal').classList.remove('hidden');
+    }
+
+    function closeRoleViewModal() {
+      document.getElementById('role-view-modal').classList.add('hidden');
+      viewingRoleId = null;
+    }
+
+    function editFromRoleView() {
+      const role = allRoles.find(r => r.id === viewingRoleId);
+      closeRoleViewModal();
+      if (role) openRoleModal(role);
     }
 
     function openRoleModal(role) {
