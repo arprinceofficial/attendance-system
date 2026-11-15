@@ -1456,10 +1456,9 @@ router.delete('/users/:id', requirePermission('delete_users'), async (req: Reque
       return;
     }
 
-    if (target.role === 'teacher') {
-      await prisma.user.updateMany({ where: { teacherId: id }, data: { teacherId: null } });
-      await prisma.attendanceLink.updateMany({ where: { teacherId: id }, data: { isActive: false } });
-    }
+    await prisma.user.updateMany({ where: { teacherId: id }, data: { teacherId: null } });
+    await prisma.attendanceLink.updateMany({ where: { teacherId: id }, data: { isActive: false } });
+    await prisma.attendanceLink.updateMany({ where: { createdById: id }, data: { createdById: null } });
 
     await prisma.attendance.deleteMany({ where: { userId: id } });
     await prisma.user.delete({ where: { id } });
